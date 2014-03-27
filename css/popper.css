@@ -25,6 +25,22 @@
   border: solid 5px #AAA;
   background: #BBB;
 }
+.popper-red {
+  background-color: #EBCCD1;
+  border-color: #DEA3A3;
+}
+.popper-green {
+  background-color: #D6E9C6;
+  border-color: #98B799;
+}
+.popper-blue {
+  background-color: #BCE8F1;
+  border-color: #98C3D7;
+}
+.popper-yellow {
+  background-color: #EFEAD0;
+  border-color: #DFCDAE;
+}
 #shooter-control {
   width: 100%; 
   height: 100%; 
@@ -52,10 +68,11 @@
 }
 .point {
   display: none; 
-  background: #BBB; 
+  /*background: #BBB; */
   border-radius: 50px; 
   position: absolute; 
-  z-index: 5
+  z-index: 5;
+  border-style: solid;
 }
 #debug {
   font-size: 14px;

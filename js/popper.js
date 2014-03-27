@@ -27,6 +27,11 @@ $(document).ready(function() {
   $("#popper-container").append(gameoverlay);
 
   // TO DO: combine the following
+  colors = ["popper-red", "popper-green", "popper-blue", "popper-yellow"]
+  rand = Math.floor(Math.random() * colors.length);
+  currColor = colors[rand];
+  $(".popper-shooter").addClass(currColor);
+  
   shooteroverlay.mousemove(function(e) {
     if (!gameover) {
       rotatedeg = (e.pageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
@@ -50,7 +55,13 @@ $(document).ready(function() {
     if(!shooting && !gameover) {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg*10)/10);
-      $("#popper-container").createBubble().shoot(rotatedeg);
+      $("#popper-container").createBubble().addClass(currColor).shoot(rotatedeg);
+      for(var i=0; i<colors.length; i++) {
+        $(".popper-shooter").removeClass(colors[i]);
+      }
+      rand = Math.floor(Math.random() * colors.length);
+      currColor = colors[rand];
+      $(".popper-shooter").addClass(currColor);
     }
   });
   shooteroverlay.bind('touchend', function(e) {
@@ -59,6 +70,12 @@ $(document).ready(function() {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));//(touchPageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg*10)/10);
       $("#popper-container").createBubble().shoot(rotatedeg);
+      for(var i=0; i<colors.length; i++) {
+        $(".popper-shooter").removeClass(colors[i]);
+      }
+      rand = Math.floor(Math.random() * colors.length);
+      currColor = colors[rand];
+      $(".popper-shooter").addClass(currColor);
     }
   });
 
@@ -88,7 +105,7 @@ $(document).ready(function() {
 
 jQuery.fn.createBubble = function() {
   div = $("<div class='point'></div>");
-  div.css("width", BUBBLE_RADIUS*2 + "px").css("height", BUBBLE_RADIUS*2 + "px").css("border", "solid " + BUBBLE_BORDER + "px #AAA")
+  div.css("width", BUBBLE_RADIUS*2 + "px").css("height", BUBBLE_RADIUS*2 + "px").css("border-width", BUBBLE_BORDER + "px")
   $(this[0]).append(div);
   return div;
 }
