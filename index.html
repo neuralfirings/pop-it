@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Popper</title>
+
+    <script type='text/javascript' src='https://cdn.firebase.com/js/client/1.0.6/firebase.js'></script>
+    <script type='text/javascript' src='https://cdn.firebase.com/js/simple-login/1.3.0/firebase-simple-login.js'></script>
+
+    <script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="http://netdna.bootstrapcdn.com/bootswatch/3.1.1/yeti/bootstrap.min.css" rel="stylesheet">
+    <link href="css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="css/popper.css" rel="stylesheet">
+    <script type="text/javascript" src="js/popper.js"></script>
+  </head>
+  <body>
+    <div class="navbar navbar-inverse navbar-static-top" role="navigation" style="opacity: 0">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="javascript:void(0)">Popper</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="javascript:void(0)">Home</a></li>
+            <li>
+              <a id="loginlink" class="showloggedout" href="javascript:void(0)" style="display:none">Login</a>
+            </li>
+            <li id="loginform" class="" style="margin-top: 5px; display:none;">
+              <div class="form-inline" role="form">
+                <div class="form-group">
+                  <label class="sr-only" for="login-email">Email address</label>
+                  <input type="email" class="form-control" id="login-email" placeholder="Enter email">
+                </div>
+                <div class="form-group">
+                  <label class="sr-only" for="exampleInputPassword2">Password</label>
+                  <input type="password" class="form-control" id="login-pw" placeholder="Password">
+                </div>
+                <div class="checkbox">
+                  <label>
+                    <input id="login-remember" type="checkbox"> Remember me
+                  </label>
+                </div>
+                <button id="login-button" class="btn btn-default">Log in</button>
+              </div>
+            </li>
+            <li>
+              <a id="signuplink" class="showloggedout" href="javascript:void(0)" style="display:none">Sign Up</a>
+            </li>
+            <li id="signupform" class="" style="margin-top: 5px; display:none;">
+              <div class="form-inline" role="form">
+                <div class="form-group">
+                  <label class="sr-only" for="signup-email">Email address</label>
+                  <input type="email" class="form-control" id="signup-email" placeholder="Enter email">
+                </div>
+                <div class="form-group">
+                  <label class="sr-only" for="signup-pw">Password</label>
+                  <input type="password" class="form-control" id="signup-pw" placeholder="Password">
+                </div>
+                <div class="checkbox">
+                  <label>
+                    <input id="signup-remember" type="checkbox"> Remember me
+                  </label>
+                </div>
+                <button id="signup-button" class="btn btn-default">Sign Up</button>
+              </div>
+            </li>
+            <li>
+              <a id="logoutlink" class="showloggedin" href="javascript:void(0)" style="display:none">Logout</a>
+            </li>
+            <li id="logininfo"  class="showloggedin" style="display:none"></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </div>
+
+    <div class="container">
+      <div id="popper-container"></div>
+      <div id="debug" style="display:none">
+        <strong>Debug</strong><br />
+        <div id="shooter-rotate-deg"></div>
+        <div id="shoot-at-deg"></div>
+      </div>
+    </div><!-- /.container -->
+
+
+  </body>
+</html>
