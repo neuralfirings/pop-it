@@ -25,27 +25,48 @@ $(document).ready(function() {
   $("#popper-container").append(shootercontrol);
   $("#popper-container").append(shooteroverlay);
   $("#popper-container").append(gameoverlay);
+
+  // TO DO: combine the following
   shooteroverlay.mousemove(function(e) {
     if (!gameover) {
       rotatedeg = (e.pageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
+      $(".popper-shooter").data("rotatedeg", rotatedeg);
+      $(".popper-shooter").css("transform", "rotate(" + rotatedeg + "deg" + ")");
+      $("#shooter-rotate-deg").text("Shooter at " + Math.round(rotatedeg*10)/10);
+    }
+  });
+  shooteroverlay.bind('touchmove', function(e) {
+    if (!gameover) {
+      e.preventDefault();
+      rotatedeg = (e.originalEvent.touches[0].pageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
+      rotatedeg = Math.max(-80, rotatedeg); 
+      rotatedeg = Math.min(80, rotatedeg); 
+      $(".popper-shooter").data("rotatedeg", rotatedeg);
       $(".popper-shooter").css("transform", "rotate(" + rotatedeg + "deg" + ")");
       $("#shooter-rotate-deg").text("Shooter at " + Math.round(rotatedeg*10)/10);
     }
   });
   shooteroverlay.click(function(e) {
     if(!shooting && !gameover) {
-      rotatedeg = (e.pageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
+      rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg*10)/10);
       $("#popper-container").createBubble().shoot(rotatedeg);
     }
-  })
+  });
+  shooteroverlay.bind('touchend', function(e) {
+    if(!shooting && !gameover) {
+      e.preventDefault();
+      rotatedeg = Number($(".popper-shooter").data("rotatedeg"));//(touchPageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
+      $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg*10)/10);
+      $("#popper-container").createBubble().shoot(rotatedeg);
+    }
+  });
 
   // make position matrix
   w = $("#popper-container").width(); 
   h = $("#popper-container").outerHeight()-BUBBLE_RADIUS*2-BUBBLE_BORDER*2; 
   xNum = Math.floor(w/(BUBBLE_RADIUS*2)-0.5);
   yNum = Math.floor(h/(BUBBLE_RADIUS*2)-0.5)*1.5-1;
-  console.log(xNum, yNum)
   margin = (w-(xNum+0.5)*BUBBLE_RADIUS*2)/2;
   bubbleMatrix = [];
 
