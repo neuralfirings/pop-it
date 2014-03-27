@@ -1,6 +1,6 @@
 // BUBBLE_DIAMETER = 30;
 BUBBLE_BORDER = 5;
-BUBBLE_RADIUS = 20;
+BUBBLE_RADIUS = 25;
 CONTAINER_BORDER = 5;
 SPEED = 20;
 
@@ -217,9 +217,7 @@ jQuery.fn.shoot = function(startDeg) {
       } else { // occupied space :(
         clearInterval(window.shootInterval);
         shooting = false;
-        console.log(prevMatrixLoc.row, bubbleMatrix.length-9);
         if(prevMatrixLoc.row > bubbleMatrix.length-9) { // Option 4: game over x_x
-          console.log("sad face");
           $("#gameover").show();
           gameover = true;
           div.remove();

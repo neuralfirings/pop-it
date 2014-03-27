@@ -6,7 +6,7 @@
   background: #FAFAFA;
   border: solid 5px #AAA;
   border-radius: 5px;
-  /*cursor: none;*/
+  cursor: none;
   overflow: hidden;
 }
 .popper-shooter {
