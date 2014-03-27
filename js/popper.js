@@ -2,9 +2,11 @@
 BUBBLE_BORDER = 5;
 BUBBLE_RADIUS = 20;
 CONTAINER_BORDER = 5;
-SPEED = 30;
+SPEED = 20;
 
 $(document).ready(function() {
+  shooting = false;
+  gameover = false;
   shooter = $("<div class='popper-shooter'></div>");
   $("#popper-container").append(shooter);
   $("#rotateslider").change(function() {
@@ -17,24 +19,25 @@ $(document).ready(function() {
   $("#popper-container").append(pdiv);
 
   shootercontrol = $('<div id="shooter-control"></div>');
+  shooteroverlay = $('<div id="shooter-control-overlay"></div>');
+  gameoverlay = $('<div id="gameover"></div>');
+  gameoverlay.append("<div style='color: #300; text-align: center; font-size: 60px; margin-top: 200px'><strong>Game Over <i class='fa fa-frown-o'></i></strong></div>")
   $("#popper-container").append(shootercontrol);
-  isMouseDown = false;
-  shootercontrol.mousedown(function(e) {
-    isMouseDown = true;
-  })
-  shootercontrol.mousemove(function(e) {
-    if(true) {
+  $("#popper-container").append(shooteroverlay);
+  $("#popper-container").append(gameoverlay);
+  shooteroverlay.mousemove(function(e) {
+    if (!gameover) {
       rotatedeg = (e.pageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
       $(".popper-shooter").css("transform", "rotate(" + rotatedeg + "deg" + ")");
       $("#shooter-rotate-deg").text("Shooter at " + Math.round(rotatedeg*10)/10);
     }
   });
-  shootercontrol.click(function(e) {
-    rotatedeg = (e.pageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
-    $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg*10)/10);
-    $("#popper-container").createBubble().shoot(rotatedeg);
-    // pdiv.shoot(rotatedeg)
-    isMouseDown = false;
+  shooteroverlay.click(function(e) {
+    if(!shooting && !gameover) {
+      rotatedeg = (e.pageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
+      $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg*10)/10);
+      $("#popper-container").createBubble().shoot(rotatedeg);
+    }
   })
 
   // make position matrix
@@ -55,7 +58,7 @@ $(document).ready(function() {
       } else {
         x = i*BUBBLE_RADIUS*2+BUBBLE_RADIUS+margin;
       }
-      y = h-BUBBLE_RADIUS*j*1.5;
+      y = h-BUBBLE_RADIUS*j*1.7;
       bubbleMatrix[j][i] = { x: x, y: y }
       // $("#popper-container").createBubble().drawAt(x, y);
     }
@@ -161,27 +164,41 @@ jQuery.fn.shoot = function(startDeg) {
   prevMatrixLoc = {row: "", num: ""}
   h = $("#popper-container").outerHeight()-BUBBLE_RADIUS*2-BUBBLE_BORDER*2; 
   t = 0;
+  ctr = 0;
   window.shootInterval = setInterval(function() {
+    shooting = true;
     p = getPointAtT(t, startDeg);
     if (p.y <= h) {
       currMatrixLoc = findClosestInMatrix(p.x, p.y);
       if(isMatrixLocEmpty(currMatrixLoc)) { // free space!
-        div.drawAt(p.x, p.y);
+        if(ctr%2 == 0) { // draw every other interval
+          div.drawAt(p.x, p.y);
+        }
         prevMatrixLoc = currMatrixLoc;
         t+=SPEED;
       } else { // occupied space :(
         clearInterval(window.shootInterval);
-        div.putInMatrix(prevMatrixLoc)
+        shooting = false;
+        console.log(prevMatrixLoc.row, bubbleMatrix.length-9);
+        if(prevMatrixLoc.row > bubbleMatrix.length-9) {
+          console.log("sad face");
+          $("#gameover").show();
+          gameover = true;
+          div.remove();
+        } else {
+          div.putInMatrix(prevMatrixLoc)
+        }
       }
     } else { // top of the container!!
       clearInterval(window.shootInterval);
+      shooting = false;
       coords = getPointAtY(h+BUBBLE_RADIUS, startDeg);
       currMatrixLoc = findClosestInMatrix(coords.x, coords.y);
-      if(isMatrixLocEmpty(currMatrixLoc)) { // free space!
+      if(isMatrixLocEmpty(currMatrixLoc)) { // free space at top!!
         div.putInMatrix(currMatrixLoc)
       } else { // occupied space :(
         div.putInMatrix(prevMatrixLoc)
       }
     }
-  }, 10)
+  }, 5)
 }

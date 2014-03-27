@@ -6,7 +6,7 @@
   background: #FAFAFA;
   border: solid 5px #AAA;
   border-radius: 5px;
-  cursor: none;
+  /*cursor: none;*/
   overflow: hidden;
 }
 .popper-shooter {
@@ -31,6 +31,24 @@
   background: #EEE;
   position: absolute;
   bottom: 0px;
+}
+#shooter-control-overlay {
+  width: 100%; 
+  height: 100%; 
+  position: absolute;
+  bottom: 0px;
+  opacity: 0;
+  z-index: 1000
+}
+#gameover {
+  width: 100%; 
+  height: 100%; 
+  background: #B99;
+  opacity: 0.6;
+  position: absolute;
+  bottom: 0px;
+  z-index: 999;
+  display: none;
 }
 .point {
   display: none; 
