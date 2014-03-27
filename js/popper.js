@@ -31,7 +31,7 @@ $(document).ready(function() {
   rand = Math.floor(Math.random() * colors.length);
   currColor = colors[rand];
   $(".popper-shooter").addClass(currColor);
-  
+
   shooteroverlay.mousemove(function(e) {
     if (!gameover) {
       rotatedeg = (e.pageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
@@ -69,7 +69,7 @@ $(document).ready(function() {
       e.preventDefault();
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));//(touchPageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg*10)/10);
-      $("#popper-container").createBubble().shoot(rotatedeg);
+      $("#popper-container").createBubble().addClass(currColor).shoot(rotatedeg);
       for(var i=0; i<colors.length; i++) {
         $(".popper-shooter").removeClass(colors[i]);
       }
@@ -218,12 +218,12 @@ jQuery.fn.shoot = function(startDeg) {
         clearInterval(window.shootInterval);
         shooting = false;
         console.log(prevMatrixLoc.row, bubbleMatrix.length-9);
-        if(prevMatrixLoc.row > bubbleMatrix.length-9) {
+        if(prevMatrixLoc.row > bubbleMatrix.length-9) { // Option 4: game over x_x
           console.log("sad face");
           $("#gameover").show();
           gameover = true;
           div.remove();
-        } else {
+        } else { // Option 3: drop it in lines 3+
           div.putInMatrix(prevMatrixLoc)
         }
       }
@@ -232,9 +232,9 @@ jQuery.fn.shoot = function(startDeg) {
       shooting = false;
       coords = getPointAtY(h+BUBBLE_RADIUS, startDeg);
       currMatrixLoc = findClosestInMatrix(coords.x, coords.y);
-      if(isMatrixLocEmpty(currMatrixLoc)) { // free space at top!!
+      if(isMatrixLocEmpty(currMatrixLoc)) { // Option 1: free space at top!! drop in line 1
         div.putInMatrix(currMatrixLoc)
-      } else { // occupied space :(
+      } else { // Option 2: occupied space drop in line 2
         div.putInMatrix(prevMatrixLoc)
       }
     }
