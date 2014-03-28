@@ -257,6 +257,12 @@ lookAround = (loc) ->
 
   return enviro2
 
+drop = (locs) ->
+  console.log 'drop these like their hot'
+  for l in locs
+    console.log 'dropping', l.row, l.num
+  return
+
 ############################################################
 ### jQuery add ons, mostly relatied to shooting a bubble ###
 ############################################################
@@ -276,6 +282,12 @@ jQuery.fn.putInMatrix = (loc) ->
   div.attr "data-matrow", loc.row
   div.attr "data-matnum", loc.num
   div.text loc.row + ", " + loc.num
+
+  # check for similar colors and for those with greater than three, drop them like their hot
+  sameColorLocs = checkSameColor(loc)
+  if sameColorLocs.length >= 3
+    drop(sameColorLocs)
+
   return
 
 jQuery.fn.drawAt = (x, y) ->

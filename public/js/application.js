@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, SPEED, bubbleMatrix, checkSameColor, findClosestInMatrix, getColor, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, stringifyLoc;
+var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, SPEED, bubbleMatrix, checkSameColor, drop, findClosestInMatrix, getColor, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, stringifyLoc;
 
 BUBBLE_BORDER = 5;
 
@@ -289,6 +289,15 @@ lookAround = function(loc) {
   return enviro2;
 };
 
+drop = function(locs) {
+  var l, _i, _len;
+  console.log('drop these like their hot');
+  for (_i = 0, _len = locs.length; _i < _len; _i++) {
+    l = locs[_i];
+    console.log('dropping', l.row, l.num);
+  }
+};
+
 
 /* jQuery add ons, mostly relatied to shooting a bubble */
 
@@ -301,7 +310,7 @@ jQuery.fn.createBubble = function() {
 };
 
 jQuery.fn.putInMatrix = function(loc) {
-  var coords, div;
+  var coords, div, sameColorLocs;
   div = $(this[0]);
   bubbleMatrix[loc.row][loc.num].div = div;
   bubbleMatrix[loc.row][loc.num].color = div.attr("data-color");
@@ -310,6 +319,10 @@ jQuery.fn.putInMatrix = function(loc) {
   div.attr("data-matrow", loc.row);
   div.attr("data-matnum", loc.num);
   div.text(loc.row + ", " + loc.num);
+  sameColorLocs = checkSameColor(loc);
+  if (sameColorLocs.length >= 3) {
+    drop(sameColorLocs);
+  }
 };
 
 jQuery.fn.drawAt = function(x, y) {
