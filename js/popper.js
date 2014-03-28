@@ -27,10 +27,11 @@ $(document).ready(function() {
   $("#popper-container").append(gameoverlay);
 
   // TO DO: combine the following
-  colors = ["popper-red", "popper-green", "popper-blue", "popper-yellow"]
+  colors = ["red"]//, "green", "blue", "yellow"]
   rand = Math.floor(Math.random() * colors.length);
   currColor = colors[rand];
-  $(".popper-shooter").addClass(currColor);
+  currColorClass = "popper-" + currColor;
+  $(".popper-shooter").addClass(currColorClass);
 
   shooteroverlay.mousemove(function(e) {
     if (!gameover) {
@@ -55,13 +56,14 @@ $(document).ready(function() {
     if(!shooting && !gameover) {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg*10)/10);
-      $("#popper-container").createBubble().addClass(currColor).shoot(rotatedeg);
+      $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg)
       for(var i=0; i<colors.length; i++) {
-        $(".popper-shooter").removeClass(colors[i]);
+        $(".popper-shooter").removeClass("popper-" + colors[i]);
       }
       rand = Math.floor(Math.random() * colors.length);
       currColor = colors[rand];
-      $(".popper-shooter").addClass(currColor);
+      currColorClass = "popper-" + currColor;
+      $(".popper-shooter").addClass(currColorClass);
     }
   });
   shooteroverlay.bind('touchend', function(e) {
@@ -69,13 +71,14 @@ $(document).ready(function() {
       e.preventDefault();
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));//(touchPageX - $(this).offset().left)/$(this).outerWidth() * 160 - 80;
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg*10)/10);
-      $("#popper-container").createBubble().addClass(currColor).shoot(rotatedeg);
+      $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
       for(var i=0; i<colors.length; i++) {
-        $(".popper-shooter").removeClass(colors[i]);
+        $(".popper-shooter").removeClass("popper-" + colors[i]);
       }
       rand = Math.floor(Math.random() * colors.length);
       currColor = colors[rand];
-      $(".popper-shooter").addClass(currColor);
+      currColorClass = "popper-" + currColor;
+      $(".popper-shooter").addClass(currColorClass);
     }
   });
 
@@ -183,17 +186,168 @@ function findClosestInMatrix(x, y) {
 }
 
 function isMatrixLocEmpty(loc) {
-  return bubbleMatrix[loc.row][loc.num].div == undefined
+  if (loc.row<0 || loc.row>bubbleMatrix.length-1 || loc.num<0 || loc.num>bubbleMatrix[0].length-1)
+    return true;
+  else
+    return bubbleMatrix[loc.row][loc.num].div == undefined
 }
 
 jQuery.fn.putInMatrix = function(loc) {
-  bubbleMatrix[loc.row][loc.num].div = $(this[0])
+  div = $(this[0])
+  bubbleMatrix[loc.row][loc.num].div = div
+  bubbleMatrix[loc.row][loc.num].color = div.attr("data-color")
   coords = bubbleMatrix[loc.row][loc.num]
-  $(this[0]).drawAt(coords.x, coords.y);
+  div.drawAt(coords.x, coords.y);
+  div.attr("data-matrow", loc.row);
+  div.attr("data-matnum", loc.num);
+  div.text(loc.row  + ", " + loc.num)
+
+  // enviro = lookAround(loc)
+  x = checkSameColor(loc, "red")
+  console.log("aftercheck", x)
+  // sameColorLocs = []
 }
 
 jQuery.fn.drawAt = function(x, y) {
   $(this[0]).show().css("bottom", y+ "px").css("left", + x + "px");
+}
+
+
+checkSameColor2 = function(loc, color, n) {
+  if(n==undefined) {
+    n=0;
+    checkedBefore = [];
+  } else {
+    n=n+1;
+  }
+  if (n<100) {
+    if ($.inArray("r"+loc.row+"n"+loc.num, checkedBefore) != -1) { // checked already
+      return false;
+    } else {
+      checkedBefore.push("r"+loc.row+"n"+loc.num);
+      if (isMatrixLocEmpty(loc)) { // not on the grid
+        return false;
+      } else {
+        if (bubbleMatrix[loc.row][loc.num].color != color) // not the right color {
+          // recursive stuff here
+        }
+      }
+    }
+  }
+}
+
+
+checkedBefore = [];
+checkSameColor = function(loc, color, n)  {
+  console.log(checkedBefore)
+  if(n==undefined) {
+    n=0;
+    checkedBefore = [];
+  } else {
+    n=n+1;
+  }
+  if (n<100) {
+    if ($.inArray("r"+loc.row+"n"+loc.num, checkedBefore) != -1) {
+      return false;
+    } else {
+      checkedBefore.push("r"+loc.row+"n"+loc.num);
+      if (bubbleMatrix[loc.row][loc.num].color == color) {
+        enviro = lookAround(loc);
+        ctr = 0
+        result = []
+        for(var i=0; i<enviro.length; i++) {
+          if (!isMatrixLocEmpty(enviro[i])) {
+            data = checkSameColor(enviro[i], color, n)
+            if (data) {
+              result = result.concat(data)
+            }
+          } 
+        }
+        console.log ("returned", result.concat(loc))
+        return result.concat(loc) 
+      } 
+    }
+  }
+}
+
+
+//   sameColorLocs.push(loc);
+//   console.log("pushed loc", loc)
+//   color = bubbleMatrix[loc.row][loc.num].color
+//   enviro = lookAround(loc);
+//   for(var i=0; i<enviro.length; i++) {
+//     newloc = enviro[i]
+//     if(!isMatrixLocEmpty(newloc)) {
+//       if ($.inArray(newloc, checkedBefore) == -1 && bubbleMatrix[newloc.row][newloc.num].color == color) {
+//         // console.log("same color!", newloc.row, newloc.num);
+
+//         sameColorLocs2 = checkSameColor(newloc)
+//         if(sameColorLocs2.length>0) {
+//           sameColorLocs = sameColorLocs.concat(sameColorLocs2);
+//         }
+//         return sameColorLocs; 
+//       } else {
+//         return [];
+//       }
+//     }
+//   }
+// }
+
+// returns a list of locations in bMatrix
+lookAround = function(loc) {
+  div = $(this[0])
+  row = loc.row //$(this[0]).attr("data-matrow")
+  num = loc.num //$(this[0]).attr("data-matnum")
+  enviro = []
+  
+  if (row % 2 == 0) { alt = -1 } else { alt = 0 } // even vs. odd row
+  if (row == 0 ) { top = true } else { top = false };
+  if (num == 0 ) { left = true } else { left = false }
+  if (num >= bubbleMatrix[0].length) { right = true } else { right = false }; 
+
+  // if (!top && !left ) { enviro.push({row: row-1, num: num+alt}); }
+  // if (!top && !right) { enviro.push({row: row-1, num: num+alt+1}); }
+  // if (!left) { enviro.push({row: row, num: num-1}); }
+  // if (!right) { enviro.push({row: row, num: num+1}); }
+  // if (!left) { enviro.push({row: row+1, num: num}); }
+  // if (!right) { enviro.push({row: row+1, num: num+1}); }
+  enviro.push(bubbleMatrix[row-1][num+alt  ]);
+  enviro.push(bubbleMatrix[row-1][num+alt+1]); 
+  enviro.push(bubbleMatrix[row  ][num-1    ]); 
+  enviro.push(bubbleMatrix[row  ][num+1    ]); 
+  enviro.push(bubbleMatrix[row+1][num      ]); 
+  enviro.push(bubbleMatrix[row+1][num+1    ]); 
+  // enviro.push({row: row-1, num: num+alt}); 
+  // enviro.push({row: row-1, num: num+alt+1}); 
+  // enviro.push({row: row, num: num-1}); 
+  // enviro.push({row: row, num: num+1}); 
+  // enviro.push({row: row+1, num: num}); 
+  // enviro.push({row: row+1, num: num+1}); 
+
+  // if(row == 0) { // wall 
+  //   enviro.push({row: row, num: num-1})
+  //   enviro.push({row: row, num: num+1})
+  //   enviro.push({row: row+1, num: num-1})
+  //   enviro.push({row: row+1, num: num})
+  // } else {
+  //   if(row % 2 == 0) { // even row
+  //     enviro.push({row: row-1, num: num-1}) // [num-1])
+  //     enviro.push({row: row-1, num: num }) //[num])
+  //     enviro.push({row: row, num: num-1})
+  //     enviro.push({row: row, num: num+1})
+  //     enviro.push({row: row+1, num: num-1})
+  //     enviro.push({row: row+1, num: num})
+  //   } else { // odd row
+  //     enviro.push({row: row-1, num: num}) // [num-1])
+  //     enviro.push({row: row-1, num: num+1}) //[num])
+  //     enviro.push({row: row, num: num-1})
+  //     enviro.push({row: row, num: num+1})
+  //     enviro.push({row: row+1, num: num})
+  //     enviro.push({row: row+1, num: num+1})
+  //   }
+  // }
+
+  return enviro
 }
 
 jQuery.fn.shoot = function(startDeg) {
@@ -217,7 +371,7 @@ jQuery.fn.shoot = function(startDeg) {
       } else { // occupied space :(
         clearInterval(window.shootInterval);
         shooting = false;
-        if(prevMatrixLoc.row > bubbleMatrix.length-9) { // Option 4: game over x_x
+        if(prevMatrixLoc.row > 8) { // Option 4: game over x_x
           $("#gameover").show();
           gameover = true;
           div.remove();
@@ -236,5 +390,7 @@ jQuery.fn.shoot = function(startDeg) {
         div.putInMatrix(prevMatrixLoc)
       }
     }
-  }, 5)
+  }, 5);
+
+  return div;
 }

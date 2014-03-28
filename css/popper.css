@@ -73,6 +73,10 @@
   position: absolute; 
   z-index: 5;
   border-style: solid;
+  color: #888;
+  line-height: 40px;
+  font-size: 12px;
+  text-align: center;
 }
 #debug {
   font-size: 14px;
