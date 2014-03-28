@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, SPEED, bubbleMatrix, checkSameColor, drop, findClosestInMatrix, getColor, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, stringifyLoc;
+var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, SPEED, bubbleMatrix, checkSameColor, drop, findClosestInMatrix, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, stringifyLoc;
 
 BUBBLE_BORDER = 5;
 
@@ -290,12 +290,23 @@ lookAround = function(loc) {
 };
 
 drop = function(locs) {
-  var l, _i, _len;
-  console.log('drop these like their hot');
+  var l, ldiv, _i, _len;
+  if (locs[0] === void 0) {
+    locs = [locs];
+  }
   for (_i = 0, _len = locs.length; _i < _len; _i++) {
     l = locs[_i];
-    console.log('dropping', l.row, l.num);
+    ldiv = getDivFromLoc(l);
+    ldiv.fadeOut();
+    bubbleMatrix[l.row][l.num].color = void 0;
+    bubbleMatrix[l.row][l.num].div = void 0;
   }
+};
+
+getDivFromLoc = function(loc) {
+  var div;
+  div = $(".point[data-matrow=" + loc.row + "][data-matnum=" + loc.num + "]");
+  return div;
 };
 
 

@@ -258,10 +258,19 @@ lookAround = (loc) ->
   return enviro2
 
 drop = (locs) ->
-  console.log 'drop these like their hot'
+  if locs[0] == undefined
+    locs = [locs]
+
   for l in locs
-    console.log 'dropping', l.row, l.num
+    ldiv = getDivFromLoc(l)
+    ldiv.fadeOut() # to be replaced by something more drop like
+    bubbleMatrix[l.row][l.num].color = undefined
+    bubbleMatrix[l.row][l.num].div = undefined
   return
+
+getDivFromLoc = (loc) ->
+  div = $(".point[data-matrow=" + loc.row + "][data-matnum=" + loc.num + "]")
+  return div
 
 ############################################################
 ### jQuery add ons, mostly relatied to shooting a bubble ###
