@@ -11,6 +11,10 @@ gulp.task('default', ['coffee', 'sass', 'watch']);
 gulp.task('coffee', function() {
   gulp.src('./coffee/*.coffee')
       .pipe(coffee({ bare: true }))
+      .on('error', function (err) {
+          console.error(err);
+        })
+      // .pipe(gulp.dest('./public/js'))
       .pipe(concat('application.js'))
       .pipe(gulp.dest('./public/js'))
       .pipe(rename('application.min.js'))
@@ -20,8 +24,12 @@ gulp.task('coffee', function() {
 
 gulp.task('sass', function () {
     gulp.src('./scss/*.scss')
-        .pipe(sass())
-        .pipe(gulp.dest('./public/css'));
+      .pipe(sass())
+      .on('error', function (err) {
+        console.error(err);
+      })
+      .pipe(concat('application.css'))
+      .pipe(gulp.dest('./public/css'));
 });
 
 gulp.task('watch', function() {
