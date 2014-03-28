@@ -228,7 +228,7 @@ checkSameColor2 = function(loc, color, n) {
       if (isMatrixLocEmpty(loc)) { // not on the grid
         return false;
       } else {
-        if (bubbleMatrix[loc.row][loc.num].color != color) // not the right color {
+        if (bubbleMatrix[loc.row][loc.num].color != color) { // not the right color {
           // recursive stuff here
         }
       }
