@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, SPEED, bubbleMatrix, checkSameColor, drop, findClosestInMatrix, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, stringifyLoc;
+var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, SPEED, bubbleMatrix, checkSameColor, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, shooting, stringifyLoc;
 
 BUBBLE_BORDER = 5;
 
@@ -10,10 +10,12 @@ SPEED = 20;
 
 bubbleMatrix = [];
 
+shooting = false;
+
+gameover = false;
+
 $(document).ready(function() {
-  var colors, currColor, currColorClass, gameover, gameoverlay, h, i, j, margin, rand, shooter, shootercontrol, shooteroverlay, shooting, w, x, xNum, y, yNum;
-  shooting = false;
-  gameover = false;
+  var colors, currColor, currColorClass, gameoverlay, h, i, j, margin, rand, shooter, shootercontrol, shooteroverlay, w, x, xNum, y, yNum;
   shooter = $("<div class='popper-shooter'></div>");
   shootercontrol = $("<div id='shooter-control'></div>");
   shooteroverlay = $("<div id='shooter-control-overlay'></div>");
@@ -51,6 +53,7 @@ $(document).ready(function() {
   });
   shooteroverlay.click(function(e) {
     var i, rotatedeg;
+    console.log(shooting);
     if (!shooting && !gameover) {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
@@ -334,6 +337,7 @@ jQuery.fn.putInMatrix = function(loc) {
   if (sameColorLocs.length >= 3) {
     drop(sameColorLocs);
   }
+  shooting = false;
 };
 
 jQuery.fn.drawAt = function(x, y) {
@@ -352,7 +356,7 @@ jQuery.fn.shoot = function(startDeg) {
   t = 0;
   ctr = 0;
   window.shootInterval = setInterval(function() {
-    var coords, currMatrixLoc, gameover, p, shooting;
+    var coords, currMatrixLoc, p;
     shooting = true;
     p = getPointAtT(t, startDeg);
     if (p.y <= h) {
@@ -365,18 +369,17 @@ jQuery.fn.shoot = function(startDeg) {
         t += SPEED;
       } else {
         clearInterval(window.shootInterval);
-        shooting = false;
         if (prevMatrixLoc.row > 8) {
           $("#gameover").show();
           gameover = true;
           div.remove();
+          shooting = false;
         } else {
           div.putInMatrix(prevMatrixLoc);
         }
       }
     } else {
       clearInterval(window.shootInterval);
-      shooting = false;
       coords = getPointAtY(h + BUBBLE_RADIUS, startDeg);
       currMatrixLoc = findClosestInMatrix(coords.x, coords.y);
       if (isMatrixLocEmpty(currMatrixLoc)) {

@@ -75,7 +75,7 @@
   position: absolute;
   z-index: 5;
   border-style: solid;
-  color: #888;
+  color: transparent;
   line-height: 40px;
   font-size: 12px;
   text-align: center; }

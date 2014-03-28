@@ -5,10 +5,10 @@ BUBBLE_RADIUS = 25
 CONTAINER_BORDER = 5
 SPEED = 20
 bubbleMatrix = []
+shooting = false
+gameover = false
 
 $(document).ready ->
-  shooting = false
-  gameover = false
 
   shooter = $("<div class='popper-shooter'></div>")
   shootercontrol = $("<div id='shooter-control'></div>")
@@ -46,6 +46,7 @@ $(document).ready ->
     return
 
   shooteroverlay.click (e) ->
+    console.log shooting
     if not shooting and not gameover
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
@@ -297,6 +298,7 @@ jQuery.fn.putInMatrix = (loc) ->
   if sameColorLocs.length >= 3
     drop(sameColorLocs)
 
+  shooting = false 
   return
 
 jQuery.fn.drawAt = (x, y) ->
@@ -325,16 +327,15 @@ jQuery.fn.shoot = (startDeg) ->
         t += SPEED
       else # occupied space :(
         clearInterval window.shootInterval
-        shooting = false
         if prevMatrixLoc.row > 8 # Option 4: game over x_x
           $("#gameover").show()
           gameover = true
           div.remove()
+          shooting = false
         else # Option 3: drop it in lines 3+
           div.putInMatrix prevMatrixLoc
     else # top of the container!!
       clearInterval window.shootInterval
-      shooting = false
       coords = getPointAtY(h + BUBBLE_RADIUS, startDeg)
       currMatrixLoc = findClosestInMatrix(coords.x, coords.y)
       if isMatrixLocEmpty(currMatrixLoc) # Option 1: free space at top!! drop in line 1
