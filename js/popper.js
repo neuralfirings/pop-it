@@ -203,8 +203,8 @@ jQuery.fn.putInMatrix = function(loc) {
   div.text(loc.row  + ", " + loc.num)
 
   // enviro = lookAround(loc)
-  x = checkSameColor(loc, "red")
-  console.log("aftercheck", x)
+  // x = checkSameColor(loc, "red")
+  // console.log("aftercheck", x)
   // sameColorLocs = []
 }
 
@@ -228,8 +228,16 @@ checkSameColor2 = function(loc, color, n) {
       if (isMatrixLocEmpty(loc)) { // not on the grid
         return false;
       } else {
-        if (bubbleMatrix[loc.row][loc.num].color != color) { // not the right color {
+        if (bubbleMatrix[loc.row][loc.num].color != color) { // not the right color 
+          return false; 
+        } else {
           // recursive stuff here
+          enviro = lookAround(loc);
+          arr = []; 
+          for (var i=0; i<enviro.length; i++) {
+            arr = arr.concat(checkSameColor2(enviro[i]));
+          }
+          return arr.concat(loc);
         }
       }
     }
