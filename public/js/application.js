@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, SPEED, bubbleMatrix, checkCluster, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, shooting, stringifyLoc;
+var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, MAX_ANGLE, SPEED, bubbleMatrix, checkCluster, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, shooting, stringifyLoc;
 
 BUBBLE_BORDER = 5;
 
@@ -8,6 +8,8 @@ CONTAINER_BORDER = 5;
 
 SPEED = 20;
 
+MAX_ANGLE = 75;
+
 bubbleMatrix = [];
 
 shooting = false;
@@ -15,13 +17,15 @@ shooting = false;
 gameover = false;
 
 $(document).ready(function() {
-  var colors, currColor, currColorClass, gameoverlay, h, i, j, margin, rand, shooter, shootercontrol, shooteroverlay, w, x, xNum, y, yNum;
+  var colors, currColor, currColorClass, gameoverlay, h, i, j, margin, rand, shooter, shooterbase, shootercontrol, shooteroverlay, w, x, xNum, y, yNum;
   shooter = $("<div class='popper-shooter'></div>");
   shootercontrol = $("<div id='shooter-control'></div>");
+  shooterbase = $("<div id='shooter-base'></div>");
   shooteroverlay = $("<div id='shooter-control-overlay'></div>");
   gameoverlay = $("<div id='gameover'></div>");
   gameoverlay.append("<div style='color: #300; text-align: center; font-size: 60px; margin-top: 200px'><strong>Game Over <i class='fa fa-frown-o'></i></strong></div>");
   $("#popper-container").append(shootercontrol);
+  $("#popper-container").append(shooterbase);
   $("#popper-container").append(shooteroverlay);
   $("#popper-container").append(gameoverlay);
   $("#popper-container").append(shooter);
@@ -33,7 +37,9 @@ $(document).ready(function() {
   shooteroverlay.mousemove(function(e) {
     var rotatedeg;
     if (!gameover) {
-      rotatedeg = (e.pageX - $(this).offset().left) / $(this).outerWidth() * 160 - 80;
+      rotatedeg = (e.pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE;
+      rotatedeg = Math.max(-MAX_ANGLE, rotatedeg);
+      rotatedeg = Math.min(MAX_ANGLE, rotatedeg);
       $(".popper-shooter").data("rotatedeg", rotatedeg);
       $(".popper-shooter").css("transform", "rotate(" + rotatedeg + "deg" + ")");
       $("#shooter-rotate-deg").text("Shooter at " + Math.round(rotatedeg * 10) / 10);
@@ -43,9 +49,9 @@ $(document).ready(function() {
     var rotatedeg;
     if (!gameover) {
       e.preventDefault();
-      rotatedeg = (e.originalEvent.touches[0].pageX - $(this).offset().left) / $(this).outerWidth() * 160 - 80;
-      rotatedeg = Math.max(-80, rotatedeg);
-      rotatedeg = Math.min(80, rotatedeg);
+      rotatedeg = (e.originalEvent.touches[0].pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE;
+      rotatedeg = Math.max(-MAX_ANGLE, rotatedeg);
+      rotatedeg = Math.min(MAX_ANGLE, rotatedeg);
       $(".popper-shooter").data("rotatedeg", rotatedeg);
       $(".popper-shooter").css("transform", "rotate(" + rotatedeg + "deg" + ")");
       $("#shooter-rotate-deg").text("Shooter at " + Math.round(rotatedeg * 10) / 10);
@@ -53,7 +59,6 @@ $(document).ready(function() {
   });
   shooteroverlay.click(function(e) {
     var i, rotatedeg;
-    console.log(shooting);
     if (!shooting && !gameover) {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
@@ -300,24 +305,28 @@ lookAround = function(loc) {
 };
 
 drop = function(locs, type, callback) {
-  var b, l, ldiv, target, _i, _len;
+  var b, l, ldiv, target, toploc, toprow, _i, _len;
   if (locs instanceof Array) {
     locs = locs;
   } else {
     locs = [locs];
   }
+  toploc = _.min(locs, function(d) {
+    return d.row;
+  });
+  toprow = toploc.row;
   for (_i = 0, _len = locs.length; _i < _len; _i++) {
     l = locs[_i];
     bubbleMatrix[l.row][l.num].color = void 0;
     bubbleMatrix[l.row][l.num].div = void 0;
     ldiv = getDivFromLoc(l);
     b = parseInt(ldiv.css("bottom"));
-    target = (b - 600) * (l.row * 3 + 1);
+    target = (b - $("#popper-container").height()) * ((l.row - toploc.row + 1) * 3 + 1);
     if (type === "drop") {
       ldiv.animate({
         bottom: target + "px"
       }, {
-        duration: 500,
+        duration: 600,
         complete: function() {
           if (callback !== void 0) {
             return callback();
@@ -326,12 +335,12 @@ drop = function(locs, type, callback) {
       });
     } else {
       ldiv.fadeOut({
-        duration: 100,
+        duration: 150,
         complete: function() {
           if (callback !== void 0) {
             return setTimeout((function() {
               return callback();
-            }), 30);
+            }), 10);
           }
         }
       });
@@ -393,7 +402,6 @@ jQuery.fn.putInMatrix = function(loc) {
             return d.num;
           });
           i = furthest.num + 1;
-          console.log(i);
         } else {
           i++;
         }
@@ -418,6 +426,15 @@ jQuery.fn.putInMatrix = function(loc) {
       }
       return drop(looseguys, "drop");
     });
+  } else {
+    if (loc.row > 10) {
+      $("#gameover").show();
+      gameover = true;
+      div = $(".point").last();
+      div.css("background-color", "#DDD").css("border-color", "#BBB");
+      div.putInMatrix(prevMatrixLoc);
+      shooting = false;
+    }
   }
   shooting = false;
 };
@@ -451,14 +468,7 @@ jQuery.fn.shoot = function(startDeg) {
         t += SPEED;
       } else {
         clearInterval(window.shootInterval);
-        if (prevMatrixLoc.row > 8) {
-          $("#gameover").show();
-          gameover = true;
-          div.remove();
-          shooting = false;
-        } else {
-          div.putInMatrix(prevMatrixLoc);
-        }
+        div.putInMatrix(prevMatrixLoc);
       }
     } else {
       clearInterval(window.shootInterval);

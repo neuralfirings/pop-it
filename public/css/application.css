@@ -11,11 +11,11 @@
 
 .popper-shooter {
   width: 50px;
-  height: 350px;
-  transform-origin: 25px 100px;
-  -ms-transform-origin: 25px 100px;
+  height: 260px;
+  transform-origin: 50% 110px;
+  -ms-transform-origin: 50% 110px;
   /* IE 9 */
-  -webkit-transform-origin: 50% 200px;
+  -webkit-transform-origin: 50% 110px;
   /* Chrome, Safari, Opera */
   margin: 0 auto;
   position: absolute;
@@ -23,7 +23,21 @@
   left: 50%;
   margin-left: -25px;
   z-index: 10;
-  border-radius: 5px;
+  border-top-left-radius: 50px;
+  border-top-right-radius: 50px;
+  border: solid 5px #AAA;
+  background: #BBB; }
+
+#shooter-base {
+  width: 300px;
+  height: 50px;
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  margin-left: -150px;
+  z-index: 20;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
   border: solid 5px #AAA;
   background: #BBB; }
 

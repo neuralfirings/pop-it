@@ -4,6 +4,7 @@ BUBBLE_BORDER = 5
 BUBBLE_RADIUS = 25
 CONTAINER_BORDER = 5
 SPEED = 20
+MAX_ANGLE = 75
 bubbleMatrix = []
 shooting = false
 gameover = false
@@ -12,10 +13,12 @@ $(document).ready ->
 
   shooter = $("<div class='popper-shooter'></div>")
   shootercontrol = $("<div id='shooter-control'></div>")
+  shooterbase = $("<div id='shooter-base'></div>")
   shooteroverlay = $("<div id='shooter-control-overlay'></div>")
   gameoverlay = $("<div id='gameover'></div>")
   gameoverlay.append "<div style='color: #300; text-align: center; font-size: 60px; margin-top: 200px'><strong>Game Over <i class='fa fa-frown-o'></i></strong></div>"
   $("#popper-container").append shootercontrol
+  $("#popper-container").append shooterbase
   $("#popper-container").append shooteroverlay
   $("#popper-container").append gameoverlay
   $("#popper-container").append shooter
@@ -28,7 +31,9 @@ $(document).ready ->
   $(".popper-shooter").addClass currColorClass
   shooteroverlay.mousemove (e) ->
     unless gameover
-      rotatedeg = (e.pageX - $(this).offset().left) / $(this).outerWidth() * 160 - 80
+      rotatedeg = (e.pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE
+      rotatedeg = Math.max(-MAX_ANGLE, rotatedeg)
+      rotatedeg = Math.min(MAX_ANGLE, rotatedeg)
       $(".popper-shooter").data "rotatedeg", rotatedeg
       $(".popper-shooter").css "transform", "rotate(" + rotatedeg + "deg" + ")"
       $("#shooter-rotate-deg").text "Shooter at " + Math.round(rotatedeg * 10) / 10
@@ -37,16 +42,15 @@ $(document).ready ->
   shooteroverlay.bind "touchmove", (e) ->
     unless gameover
       e.preventDefault()
-      rotatedeg = (e.originalEvent.touches[0].pageX - $(this).offset().left) / $(this).outerWidth() * 160 - 80
-      rotatedeg = Math.max(-80, rotatedeg)
-      rotatedeg = Math.min(80, rotatedeg)
+      rotatedeg = (e.originalEvent.touches[0].pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE
+      rotatedeg = Math.max(-MAX_ANGLE, rotatedeg)
+      rotatedeg = Math.min(MAX_ANGLE, rotatedeg)
       $(".popper-shooter").data "rotatedeg", rotatedeg
       $(".popper-shooter").css "transform", "rotate(" + rotatedeg + "deg" + ")"
       $("#shooter-rotate-deg").text "Shooter at " + Math.round(rotatedeg * 10) / 10
     return
 
   shooteroverlay.click (e) ->
-    console.log shooting
     if not shooting and not gameover
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
@@ -268,32 +272,38 @@ drop = (locs, type, callback) ->
   else
     locs = [locs]
 
+  toploc = _.min(locs, (d) ->
+    return d.row; 
+  )
+  toprow = toploc.row
   for l in locs
     bubbleMatrix[l.row][l.num].color = undefined
     bubbleMatrix[l.row][l.num].div = undefined
     ldiv = getDivFromLoc(l)
     b = parseInt(ldiv.css("bottom"))
-    target = (b-600)*(l.row*3+1) # CONTAINER_HEIGHT
+    # console.log type, l.row, toploc.row, l.row-toploc.row+1, (b-$("#popper-container").height())*((l.row-toploc.row+1)*3+1)
+    target = (b-$("#popper-container").height())*((l.row-toploc.row+1)*3+1) # speed of droppings
     if type == "drop"
       ldiv.animate(
         { bottom: target + "px"}, 
-        { duration: 500, complete: () ->
+        { duration: 600, complete: () ->
           if callback != undefined
             callback()
         }
       );
     else
-      ldiv.fadeOut({duration: 100, complete: () ->
+      ldiv.fadeOut({duration: 150, complete: () ->
         if callback != undefined
           setTimeout (() ->
             callback()
-          ), 30
+          ), 10
       });
   return
 
 getDivFromLoc = (loc) ->
   div = $(".point[data-matrow=" + loc.row + "][data-matnum=" + loc.num + "]")
   return div
+
 
 ############################################################
 ### jQuery add ons, mostly relatied to shooting a bubble ###
@@ -337,7 +347,6 @@ jQuery.fn.putInMatrix = (loc) ->
             return d.num; 
           )
           i = furthest.num+1
-          console.log i
         else
           i++
       # console.log "wallcluster", wallcluster
@@ -359,6 +368,14 @@ jQuery.fn.putInMatrix = (loc) ->
       # console.log "drops", drops
       # window.drops = drops
     )
+  else
+    if loc.row > 10
+      $("#gameover").show()
+      gameover = true
+      div = $(".point").last()
+      div.css("background-color", "#DDD").css("border-color", "#BBB")
+      div.putInMatrix prevMatrixLoc
+      shooting = false
 
   shooting = false 
   return
@@ -389,13 +406,7 @@ jQuery.fn.shoot = (startDeg) ->
         t += SPEED
       else # occupied space :(
         clearInterval window.shootInterval
-        if prevMatrixLoc.row > 8 # Option 4: game over x_x
-          $("#gameover").show()
-          gameover = true
-          div.remove()
-          shooting = false
-        else # Option 3: drop it in lines 3+
-          div.putInMatrix prevMatrixLoc
+        div.putInMatrix prevMatrixLoc # Option 3: drop it in lines 3+
     else # top of the container!!
       clearInterval window.shootInterval
       coords = getPointAtY(h + BUBBLE_RADIUS, startDeg)
