@@ -92,29 +92,6 @@ $(document).ready(function() {
       $(".popper-shooter").addClass(currColorClass);
     }
   });
-  shooteroverlay.bind("touchend", function(e) {
-    var i, rotatedeg;
-    if (!shooting && !gameover) {
-      e.preventDefault();
-      rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
-      $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
-      $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
-      addRowCounter += Math.floor(Math.random() * 2) + 1;
-      if (addRowCounter > ROW_COUNTER_CEILING) {
-        addRow();
-        addRowCounter = 0;
-      }
-      i = 0;
-      while (i < BUBBLE_OPTIONS.length) {
-        $(".popper-shooter").removeClass("popper-" + BUBBLE_OPTIONS[i]);
-        i++;
-      }
-      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
-      currColor = BUBBLE_OPTIONS[rand];
-      currColorClass = "popper-" + currColor;
-      $(".popper-shooter").addClass(currColorClass);
-    }
-  });
   w = $("#popper-container").width();
   h = $("#popper-container").outerHeight() - BUBBLE_RADIUS * 2 - BUBBLE_BORDER * 2;
   xNum = Math.floor(w / (BUBBLE_RADIUS * 2) - 0.5);
