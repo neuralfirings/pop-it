@@ -194,12 +194,13 @@ findClosestInMatrix = (x, y) ->
 ### The next set of functions are for returning clusters of color ###
 #####################################################################
 
-checkSameColor = (loc, n, checkedBefore) ->
+checkCluster = (loc, checkColor, n, checkedBefore) ->
+  if checkColor is undefined
+    checkColor = true
   if n is undefined # new check
     n = 0
   else
     n++
-
   if checkedBefore is undefined # new check
     checkedBefore = []
 
@@ -210,8 +211,11 @@ checkSameColor = (loc, n, checkedBefore) ->
     for l in enviro
       if $.inArray(stringifyLoc(l), checkedBefore) is -1 # verify it's not already checked
         checkedBefore.push stringifyLoc(l)
-        if getColor(l) is getColor(loc) # verify that it's the right color
-          arr = arr.concat checkSameColor(l, n, checkedBefore)
+        if checkColor
+          if getColor(l) is getColor(loc) # verify that it's the right color
+            arr = arr.concat checkCluster(l, checkColor,  n, checkedBefore)
+        else
+          arr = arr.concat checkCluster(l, checkColor,  n, checkedBefore)
     return arr
   else
     console.log "too many recursions"
@@ -258,15 +262,33 @@ lookAround = (loc) ->
 
   return enviro2
 
-drop = (locs) ->
-  if locs[0] == undefined
+drop = (locs, type, callback) ->
+  if locs instanceof Array
+    locs = locs
+  else
     locs = [locs]
 
   for l in locs
-    ldiv = getDivFromLoc(l)
-    ldiv.fadeOut() # to be replaced by something more drop like
     bubbleMatrix[l.row][l.num].color = undefined
     bubbleMatrix[l.row][l.num].div = undefined
+    ldiv = getDivFromLoc(l)
+    b = parseInt(ldiv.css("bottom"))
+    target = (b-600)*(l.row*3+1) # CONTAINER_HEIGHT
+    if type == "drop"
+      ldiv.animate(
+        { bottom: target + "px"}, 
+        { duration: 500, complete: () ->
+          if callback != undefined
+            callback()
+        }
+      );
+    else
+      ldiv.fadeOut({duration: 100, complete: () ->
+        if callback != undefined
+          setTimeout (() ->
+            callback()
+          ), 30
+      });
   return
 
 getDivFromLoc = (loc) ->
@@ -294,9 +316,49 @@ jQuery.fn.putInMatrix = (loc) ->
   div.text loc.row + ", " + loc.num
 
   # check for similar colors and for those with greater than three, drop them like their hot
-  sameColorLocs = checkSameColor(loc)
+  sameColorLocs = checkCluster(loc, true)
   if sameColorLocs.length >= 3
-    drop(sameColorLocs)
+    drop(sameColorLocs, "fade", () ->
+      topsChecked = []
+      i=0
+      for b in bubbleMatrix[0]
+        topsChecked.push(i)
+        i++
+
+      wallcluster = []
+      i=0
+      while i<topsChecked.length and i < 1000
+        loc_i = 
+          row: 0
+          num: i
+        if !isMatrixLocEmpty(loc_i)
+          wallcluster = wallcluster.concat checkCluster(loc_i, false)
+          furthest = _.max(_.where(wallcluster, {row: 0}), (d) -> 
+            return d.num; 
+          )
+          i = furthest.num+1
+          console.log i
+        else
+          i++
+      # console.log "wallcluster", wallcluster
+
+      # TEAM BRUTE FORCE!!! :D 
+      looseguys = []
+      r = 0
+      while r < bubbleMatrix.length
+        n = 0
+        while n < bubbleMatrix[r].length
+          l = {row: r, num: n}
+          if !isMatrixLocEmpty(l)
+            if _.where(wallcluster, l).length == 0 
+              looseguys.push l #bubbleMatrix[r][n].div
+          n++
+        r++
+
+      drop(looseguys, "drop")
+      # console.log "drops", drops
+      # window.drops = drops
+    )
 
   shooting = false 
   return

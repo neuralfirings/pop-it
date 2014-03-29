@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, SPEED, bubbleMatrix, checkSameColor, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, shooting, stringifyLoc;
+var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, SPEED, bubbleMatrix, checkCluster, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, shooting, stringifyLoc;
 
 BUBBLE_BORDER = 5;
 
@@ -198,8 +198,11 @@ findClosestInMatrix = function(x, y) {
 
 /* The next set of functions are for returning clusters of color */
 
-checkSameColor = function(loc, n, checkedBefore) {
+checkCluster = function(loc, checkColor, n, checkedBefore) {
   var arr, enviro, l, _i, _len;
+  if (checkColor === void 0) {
+    checkColor = true;
+  }
   if (n === void 0) {
     n = 0;
   } else {
@@ -216,8 +219,12 @@ checkSameColor = function(loc, n, checkedBefore) {
       l = enviro[_i];
       if ($.inArray(stringifyLoc(l), checkedBefore) === -1) {
         checkedBefore.push(stringifyLoc(l));
-        if (getColor(l) === getColor(loc)) {
-          arr = arr.concat(checkSameColor(l, n, checkedBefore));
+        if (checkColor) {
+          if (getColor(l) === getColor(loc)) {
+            arr = arr.concat(checkCluster(l, checkColor, n, checkedBefore));
+          }
+        } else {
+          arr = arr.concat(checkCluster(l, checkColor, n, checkedBefore));
         }
       }
     }
@@ -292,17 +299,43 @@ lookAround = function(loc) {
   return enviro2;
 };
 
-drop = function(locs) {
-  var l, ldiv, _i, _len;
-  if (locs[0] === void 0) {
+drop = function(locs, type, callback) {
+  var b, l, ldiv, target, _i, _len;
+  if (locs instanceof Array) {
+    locs = locs;
+  } else {
     locs = [locs];
   }
   for (_i = 0, _len = locs.length; _i < _len; _i++) {
     l = locs[_i];
-    ldiv = getDivFromLoc(l);
-    ldiv.fadeOut();
     bubbleMatrix[l.row][l.num].color = void 0;
     bubbleMatrix[l.row][l.num].div = void 0;
+    ldiv = getDivFromLoc(l);
+    b = parseInt(ldiv.css("bottom"));
+    target = (b - 600) * (l.row * 3 + 1);
+    if (type === "drop") {
+      ldiv.animate({
+        bottom: target + "px"
+      }, {
+        duration: 500,
+        complete: function() {
+          if (callback !== void 0) {
+            return callback();
+          }
+        }
+      });
+    } else {
+      ldiv.fadeOut({
+        duration: 100,
+        complete: function() {
+          if (callback !== void 0) {
+            return setTimeout((function() {
+              return callback();
+            }), 30);
+          }
+        }
+      });
+    }
   }
 };
 
@@ -333,9 +366,58 @@ jQuery.fn.putInMatrix = function(loc) {
   div.attr("data-matrow", loc.row);
   div.attr("data-matnum", loc.num);
   div.text(loc.row + ", " + loc.num);
-  sameColorLocs = checkSameColor(loc);
+  sameColorLocs = checkCluster(loc, true);
   if (sameColorLocs.length >= 3) {
-    drop(sameColorLocs);
+    drop(sameColorLocs, "fade", function() {
+      var b, furthest, i, l, loc_i, looseguys, n, r, topsChecked, wallcluster, _i, _len, _ref;
+      topsChecked = [];
+      i = 0;
+      _ref = bubbleMatrix[0];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        b = _ref[_i];
+        topsChecked.push(i);
+        i++;
+      }
+      wallcluster = [];
+      i = 0;
+      while (i < topsChecked.length && i < 1000) {
+        loc_i = {
+          row: 0,
+          num: i
+        };
+        if (!isMatrixLocEmpty(loc_i)) {
+          wallcluster = wallcluster.concat(checkCluster(loc_i, false));
+          furthest = _.max(_.where(wallcluster, {
+            row: 0
+          }), function(d) {
+            return d.num;
+          });
+          i = furthest.num + 1;
+          console.log(i);
+        } else {
+          i++;
+        }
+      }
+      looseguys = [];
+      r = 0;
+      while (r < bubbleMatrix.length) {
+        n = 0;
+        while (n < bubbleMatrix[r].length) {
+          l = {
+            row: r,
+            num: n
+          };
+          if (!isMatrixLocEmpty(l)) {
+            if (_.where(wallcluster, l).length === 0) {
+              looseguys.push(l);
+            }
+          }
+          n++;
+        }
+        r++;
+      }
+      return drop(looseguys, "drop");
+    });
   }
   shooting = false;
 };
