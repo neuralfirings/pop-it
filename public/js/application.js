@@ -544,7 +544,7 @@ jQuery.fn.createBubble = function(color) {
 };
 
 jQuery.fn.putInMatrix = function(loc, pop) {
-  var coords, div, sameColorLocs;
+  var coords, deltaScore, div, oldScore, sameColorLocs;
   if (pop === void 0) {
     pop = true;
   }
@@ -557,10 +557,12 @@ jQuery.fn.putInMatrix = function(loc, pop) {
   div.attr("data-matnum", loc.num);
   div.text(loc.row + ", " + loc.num);
   if (pop === true) {
+    deltaScore = 0;
     sameColorLocs = checkCluster(loc, true);
     if (sameColorLocs.length >= 3) {
+      oldScore = parseInt($("#score").text());
       drop(sameColorLocs, "fade", function() {
-        var b, furthest, i, l, loc_i, looseguys, n, newScore, oldScore, r, topsChecked, wallcluster, _i, _len, _ref;
+        var b, furthest, i, l, loc_i, looseguys, n, r, topsChecked, wallcluster, _i, _len, _ref;
         topsChecked = [];
         i = 0;
         _ref = bubbleMatrix[0];
@@ -607,9 +609,8 @@ jQuery.fn.putInMatrix = function(loc, pop) {
           r++;
         }
         drop(looseguys, "drop");
-        oldScore = parseInt($("#score").text());
-        newScore = oldScore + 1 + looseguys.length * 2;
-        return $("#score").text(newScore);
+        deltaScore += Math.ceil(looseguys.length * 1.5);
+        return $("#score").text(oldScore + deltaScore);
       });
     } else {
       if (loc.row > 10) {
@@ -621,6 +622,11 @@ jQuery.fn.putInMatrix = function(loc, pop) {
         shooting = false;
       }
     }
+    if (sameColorLocs.length >= 3) {
+      deltaScore += sameColorLocs.length;
+    }
+    oldScore = parseInt($("#score").text());
+    $("#score").text(oldScore + deltaScore);
   }
   shooting = false;
 };

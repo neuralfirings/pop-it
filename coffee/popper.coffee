@@ -274,17 +274,10 @@ addRow = (colors) ->
   num = 0
   for color in colors
     div = $("#popper-container").createBubble(color).addClass("popper-" + color).text('0,'+num)
-    # console.log div
-    # div.drawAt(bubbleMatrix[0][num].x, bubbleMatrix[0][num].y)
     loc = {row: 0, num: num}
     div.putInMatrix loc, false
     div.hide().fadeIn({duration: 200})
     num++
-
-
-          # p = $("#popper-container").createBubble().addClass("opt2").css("border-color", "#BBB").css("opacity", ".5").text(j+','+i)
-      # p.drawAt(x, y)
-
 
 scoochAllDown = (n) ->
   r = bubbleMatrix.length
@@ -295,8 +288,6 @@ scoochAllDown = (n) ->
       n--
       if !isMatrixLocEmpty({row: r, num: n})
         moveBubble({row:r, num: n}, {row: r+1, num: n})
-    #   n--
-    # r--
   toggleMatrixPosition()
 
 moveBubble = (oldloc, newloc) ->
@@ -479,9 +470,12 @@ jQuery.fn.putInMatrix = (loc, pop) ->
 
   # check for similar colors and for those with greater than three, drop them like their hot
   if pop == true
+    deltaScore = 0
     sameColorLocs = checkCluster(loc, true)
     if sameColorLocs.length >= 3
+      oldScore = parseInt($("#score").text())
       drop(sameColorLocs, "fade", () ->
+        # code to drop loose bubbles
         topsChecked = []
         i=0
         for b in bubbleMatrix[0]
@@ -518,9 +512,9 @@ jQuery.fn.putInMatrix = (loc, pop) ->
 
         drop(looseguys, "drop")
 
-        oldScore = parseInt($("#score").text())
-        newScore = oldScore + 1 +  looseguys.length*2 # not quite sure how this works
-        $("#score").text(newScore) # do something fancier here
+        # oldScore = parseInt($("#score").text())
+        deltaScore += Math.ceil(looseguys.length*1.5) # not quite sure how this works
+        $("#score").text(oldScore + deltaScore) # do something fancier here
       )
     else
       if loc.row > 10
@@ -530,6 +524,11 @@ jQuery.fn.putInMatrix = (loc, pop) ->
         div.css("background-color", "#DDD").css("border-color", "#BBB")
         div.putInMatrix prevMatrixLoc
         shooting = false
+
+    if sameColorLocs.length >= 3
+      deltaScore += sameColorLocs.length
+    oldScore = parseInt($("#score").text())
+    $("#score").text(oldScore + deltaScore) # do something fancier here
   shooting = false 
   return
 
