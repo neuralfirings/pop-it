@@ -3,23 +3,29 @@
 BUBBLE_BORDER = 5
 BUBBLE_RADIUS = 25
 CONTAINER_BORDER = 5
-SPEED = 20 
+SPEED = 20 # speed of the shooter
 MAX_ANGLE = 75 # max angle of the shooter
 BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"] # should corrlate with CSS classes
-ROW_COUNTER_CEILING = 10 # when counter reaches this it adds a new row, so lower the number is harder
+ROW_COUNTER_CEILING = 10000 # when counter reaches this it adds a new row, so lower the number is harder
+ROW_COUNTER_INTERVAL = 15 # seconds before new layer
+MAX_ROW_NUM = 10 # after this it's game over sadface
 DROP_MULTIPLER = 2 # multiple of points you get when you drop bubbles
+DEFAULT_ROWS = 3
 
 # starter values
 addRowCounter = 0 # starter value
 shooting = false
 currMatrix = ""
-gameover = false
+isGameOver = false
+isPaused = false
+isWon = false
 bubbleMatrix = [] # the matrix currently in use
 bubbleMatrixOne = [] # because of the hexagonal thing
 bubbleMatrixTwo = [] # because of the hexagonal thing
 
 $(document).ready ->
   console.log("Pop It!")
+  $("#timer").text(ROW_COUNTER_INTERVAL)
 
   shooter = $("<div class='popper-shooter'></div>")
   shootercontrol = $("<div id='shooter-control'></div>")
@@ -28,11 +34,23 @@ $(document).ready ->
   gameoverlay = $("<div id='gameover'></div>")
   gameoverlay.append "<div style='color: #300; text-align: center; font-size: 60px; margin-top: 200px'><strong>Game Over <i class='fa fa-frown-o'></i></strong></div>"
 
+  pauseoverlay = $("<div id='pause'></div>")
+  pauseoverlay.append "<div style='color: #333; text-align: center; font-size: 60px; margin-top: 200px'><strong>Paused o_O</strong></div>"
+
+  winoverlay = $("<div id='victory'></div>")
+  winoverlay.append "<div style='color: #333; text-align: center; font-size: 60px; margin-top: 200px'><strong>VICTORY!  <i class='fa fa-smile-o'></i></strong></div>"
+
+
+  noticeoverlay = $("<div id='notice-overlay'>asdf</div>")
+
   $("#popper-container").append shootercontrol
   $("#popper-container").append shooterbase
   $("#popper-container").append shooteroverlay
   $("#popper-container").append gameoverlay
+  $("#popper-container").append pauseoverlay
+  $("#popper-container").append winoverlay
   $("#popper-container").append shooter
+  $("#popper-container").append noticeoverlay
 
   # Shooter code
   rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
@@ -40,7 +58,7 @@ $(document).ready ->
   currColorClass = "popper-" + currColor
   $(".popper-shooter").addClass currColorClass
   shooteroverlay.mousemove (e) ->
-    unless gameover
+    unless isGameOver or isPaused or isWon
       rotatedeg = (e.pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg)
       rotatedeg = Math.min(MAX_ANGLE, rotatedeg)
@@ -50,7 +68,7 @@ $(document).ready ->
     return
 
   shooteroverlay.bind "touchmove", (e) ->
-    unless gameover
+    unless isGameOver or isPaused or isWon
       e.preventDefault()
       rotatedeg = (e.originalEvent.touches[0].pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg)
@@ -61,7 +79,7 @@ $(document).ready ->
     return
 
   shooteroverlay.click (e) ->
-    if not shooting and not gameover
+    if not shooting and not isGameOver and not isPaused and not isWon
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
@@ -81,7 +99,7 @@ $(document).ready ->
     return
 
   shooteroverlay.bind "touchend", (e) ->
-    if not shooting and not gameover
+    if not shooting and not isGameOver and not isPaused and not isWon
       e.preventDefault()
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
@@ -154,12 +172,32 @@ $(document).ready ->
       i++
     j++
 
-  # useMatrixPosition(bubbleMatrixOne)
-  addRows(3)
-  # addRow(["red", "red", "yellow", "yellow", "green", "green", "blue", "blue"])
-  return
+  # Add Rows Mechanismmmmmmmmmm
+  addRows(DEFAULT_ROWS)
+  addRowCounterSecs = ROW_COUNTER_INTERVAL
+  window.addrow = setInterval (() ->
+    if isPaused == false 
+      $("#timer").text(addRowCounterSecs)
+      addRowCounterSecs--
+      if addRowCounterSecs < 1
+        addRow()
+        addRowCounterSecs = ROW_COUNTER_INTERVAL
+  ), 1000
+  # addRow(["red", "red", "red", "red", "red", "red", "red", "red", "red", "red", "red"])
+  
+  # CLICKS
+  $("#pause-button").click () ->
+    if isPaused == false
+      pause()
+      $(this).text("Unpause")
+    else
+      unpause()
+      $(this).text("Pause")
+  return # end of document ready
 
 
+noticeFlash = (str) ->
+  $("#notice-overlay").text(str).show().fadeOut({duration: 1200})
 
 
 #####################################################################
@@ -283,7 +321,10 @@ addRow = (colors) ->
     div.hide().fadeIn({duration: 200})
     num++
 
+
 scoochAllDown = (n) ->
+  furthestRow = 0
+  furthestRowReached = false
   r = bubbleMatrix.length
   while r > 0
     r--
@@ -292,7 +333,14 @@ scoochAllDown = (n) ->
       n--
       if !isMatrixLocEmpty({row: r, num: n})
         moveBubble({row:r, num: n}, {row: r+1, num: n})
+        if furthestRowReached == false
+          furthestRowReached = true
+          furthestRow = r+1
   toggleMatrixPosition()
+  if furthestRow > MAX_ROW_NUM
+    gameOver()
+
+
 
 moveBubble = (oldloc, newloc) ->
   # TO DO: add some animation here
@@ -447,6 +495,46 @@ getDivFromLoc = (loc) ->
   div = $(".point[data-matrow=" + loc.row + "][data-matnum=" + loc.num + "]")
   return div
 
+# TODO Re name to lost
+gameOver = () ->
+  $("#gameover").show()
+  isGameOver = true
+  clearInterval(window.addrow)
+  shooting = false
+  $("#pause-button").addClass("disabled")
+
+
+pause = () ->
+  $("#pause").show()
+  isPaused = true
+  # shooting = false
+
+unpause = () ->
+  $("#pause").hide()
+  isPaused = false
+  # shooting = true
+
+win = () ->
+  $("#victory").show()
+  clearInterval(window.addrow)
+  isWon = true
+  shooting = false
+  $("#pause-button").addClass("disabled")
+
+checkIfWon = () ->
+  didIWin = true # for now.. hehehe...
+  r = 0
+  while r < bubbleMatrix.length
+    n = 0
+    while n < bubbleMatrix[r].length
+      l = {row: r, num: n}
+      if !isMatrixLocEmpty(l)
+        didIWin = false
+        break
+      n++
+    r++
+
+  return didIWin
 
 ############################################################
 ### jQuery add ons, mostly relatied to shooting a bubble ###
@@ -513,21 +601,32 @@ jQuery.fn.putInMatrix = (loc, pop) ->
                 looseguys.push l #bubbleMatrix[r][n].div
             n++
           r++
+        drop(looseguys, "drop", () ->
+          # console.log("drop bonus", looseguys.length)
+          if checkIfWon() == true
+            win()
+        )
+        
+        if checkIfWon() == true
+          win()
 
-        drop(looseguys, "drop")
-
+        if looseguys.length > 0  
+          bonuspts = looseguys.length * DROP_MULTIPLER-1
+          if bonuspts > 1
+            noticeFlash("Bonus " + looseguys.length * (DROP_MULTIPLER-1) + " points!!")
+          else if bonuspts == 1
+            noticeFlash("Bonus " + looseguys.length * (DROP_MULTIPLER-1) + " point!")
+          
         # oldScore = parseInt($("#score").text())
         deltaScore += Math.ceil(looseguys.length * DROP_MULTIPLER) 
         $("#score").text(oldScore + deltaScore) # do something fancier here
       )
     else
-      if loc.row > 10
-        $("#gameover").show()
-        gameover = true
+      if loc.row > MAX_ROW_NUM
+        gameOver()
         div = $(".point").last()
         div.css("background-color", "#DDD").css("border-color", "#BBB")
         div.putInMatrix prevMatrixLoc
-        shooting = false
 
     if sameColorLocs.length >= 3
       deltaScore += sameColorLocs.length
