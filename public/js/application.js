@@ -32,6 +32,7 @@ bubbleMatrixTwo = [];
 
 $(document).ready(function() {
   var currColor, currColorClass, gameoverlay, h, i, j, margin, rand, shooter, shooterbase, shootercontrol, shooteroverlay, w, x, xNum, y, yNum;
+  console.log("Pop It!");
   shooter = $("<div class='popper-shooter'></div>");
   shootercontrol = $("<div id='shooter-control'></div>");
   shooterbase = $("<div id='shooter-base'></div>");
@@ -90,6 +91,29 @@ $(document).ready(function() {
       currColor = BUBBLE_OPTIONS[rand];
       currColorClass = "popper-" + currColor;
       $(".popper-shooter").addClass(currColorClass);
+    }
+  });
+  shooteroverlay.bind("touchend", function(e) {
+    var i, rotatedeg;
+    if (!shooting && !gameover) {
+      e.preventDefault();
+      rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
+      $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
+      $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
+      addRowCounter += Math.floor(Math.random() * 2) + 1;
+      if (addRowCounter > ROW_COUNTER_CEILING) {
+        addRow();
+        addRowCounter = 0;
+      }
+      i = 0;
+      while (i < BUBBLE_OPTIONS.length) {
+        $(".popper-shooter").removeClass("popper-" + BUBBLE_OPTIONS[i]);
+        i++;
+      }
+      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
+      currColor = BUBBLE_OPTIONS[rand];
+      currColorClass = "popper-" + currColor;
+      return $(".popper-shooter").addClass(currColorClass);
     }
   });
   w = $("#popper-container").width();
