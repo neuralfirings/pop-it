@@ -3,17 +3,20 @@
 BUBBLE_BORDER = 5
 BUBBLE_RADIUS = 25
 CONTAINER_BORDER = 5
-SPEED = 20
-MAX_ANGLE = 75
-bubbleMatrix = []
-bubbleMatrixOne = []
-bubbleMatrixTwo = []
-currMatrix = ""
+SPEED = 20 
+MAX_ANGLE = 75 # max angle of the shooter
+BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"] # should corrlate with CSS classes
+ROW_COUNTER_CEILING = 10 # when counter reaches this it adds a new row, so lower the number is harder
+DROP_MULTIPLER = 2 # multiple of points you get when you drop bubbles
+
+# starter values
+addRowCounter = 0 # starter value
 shooting = false
+currMatrix = ""
 gameover = false
-BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"]
-addRowCounter = 0
-addRowCeiling = 10
+bubbleMatrix = [] # the matrix currently in use
+bubbleMatrixOne = [] # because of the hexagonal thing
+bubbleMatrixTwo = [] # because of the hexagonal thing
 
 $(document).ready ->
 
@@ -62,7 +65,7 @@ $(document).ready ->
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
       addRowCounter += Math.floor(Math.random() * 2)+1
-      if addRowCounter > addRowCeiling
+      if addRowCounter > ROW_COUNTER_CEILING
         addRow()
         addRowCounter = 0
 
@@ -83,7 +86,7 @@ $(document).ready ->
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
       addRowCounter += Math.floor(Math.random() * 2)+1
-      if addRowCounter > addRowCeiling
+      if addRowCounter > ROW_COUNTER_CEILING
         addRow()
         addRowCounter = 0
 
@@ -513,7 +516,7 @@ jQuery.fn.putInMatrix = (loc, pop) ->
         drop(looseguys, "drop")
 
         # oldScore = parseInt($("#score").text())
-        deltaScore += Math.ceil(looseguys.length*1.5) # not quite sure how this works
+        deltaScore += Math.ceil(looseguys.length * DROP_MULTIPLER) 
         $("#score").text(oldScore + deltaScore) # do something fancier here
       )
     else
