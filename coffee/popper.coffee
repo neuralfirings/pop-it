@@ -6,6 +6,9 @@ CONTAINER_BORDER = 5
 SPEED = 20
 MAX_ANGLE = 75
 bubbleMatrix = []
+bubbleMatrixOne = []
+bubbleMatrixTwo = []
+currMatrix = ""
 shooting = false
 gameover = false
 
@@ -17,6 +20,7 @@ $(document).ready ->
   shooteroverlay = $("<div id='shooter-control-overlay'></div>")
   gameoverlay = $("<div id='gameover'></div>")
   gameoverlay.append "<div style='color: #300; text-align: center; font-size: 60px; margin-top: 200px'><strong>Game Over <i class='fa fa-frown-o'></i></strong></div>"
+
   $("#popper-container").append shootercontrol
   $("#popper-container").append shooterbase
   $("#popper-container").append shooteroverlay
@@ -89,10 +93,12 @@ $(document).ready ->
   xNum = Math.floor(w / (BUBBLE_RADIUS * 2) - 0.5)
   yNum = Math.floor(h / (BUBBLE_RADIUS * 2) - 0.5) * 1.5 - 1
   margin = (w - (xNum + 0.5) * BUBBLE_RADIUS * 2) / 2
-  bubbleMatrix = []
 
+  bubbleMatrixOne = []
+  bubbleMatrix = []
   j = 0
   while j < yNum
+    bubbleMatrixOne[j] = []
     bubbleMatrix[j] = []
     i = 0
     while i < xNum
@@ -102,12 +108,65 @@ $(document).ready ->
       else
         x = i * BUBBLE_RADIUS * 2 + BUBBLE_RADIUS + margin
       y = h - BUBBLE_RADIUS * j * 1.7
+      bubbleMatrixOne[j][i] =
+        x: x
+        y: y
       bubbleMatrix[j][i] =
         x: x
         y: y
+      # p = $("#popper-container").createBubble().addClass("opt1").css("border-color", "#BBB").css("opacity", ".5").text(j+','+i)
+      # p.drawAt(x, y)
       i++
     j++
+  currMatrix = "one";
+
+  bubbleMatrixTwo = []
+  j = 0
+  while j < yNum
+    bubbleMatrixTwo[j] = []
+    i = 0
+    while i < xNum
+      if j % 2 is 1
+        x = i * BUBBLE_RADIUS * 2 + margin
+        y = h
+      else
+        x = i * BUBBLE_RADIUS * 2 + BUBBLE_RADIUS + margin
+      y = h - BUBBLE_RADIUS * j * 1.7
+      bubbleMatrixTwo[j][i] =
+        x: x
+        y: y
+      # p = $("#popper-container").createBubble().addClass("opt2").css("border-color", "#BBB").css("opacity", ".5").text(j+','+i)
+      # p.drawAt(x, y)
+      i++
+    j++
+
+  # useMatrixPosition(bubbleMatrixOne)
   return
+
+
+toggleMatrixPosition = () ->
+  console.log "old", currMatrix
+  if currMatrix == "one"
+    bm = bubbleMatrixTwo
+    currMatrix = "two"
+  else
+    bm = bubbleMatrixOne
+    currMatrix = "one"
+
+  r = 0
+  while r < bm.length
+    n = 0
+    while n < bm[r].length
+      bubbleMatrix[r][n].x = bm[r][n].x
+      bubbleMatrix[r][n].y = bm[r][n].y
+      if(!isMatrixLocEmpty({row:r, num:n}))
+        div = $(".point[data-matrow='" + r + "'][data-matnum='" + n + "']")
+        div.css("left", bm[r][n].x + "px").css("bottom", bm[r][n].y)
+      n++
+    r++
+
+  console.log "new", currMatrix
+  return 
 
 
 
@@ -193,6 +252,38 @@ findClosestInMatrix = (x, y) ->
       j++
     i++
   minMatrix
+
+
+
+########################################################
+### The next set of functions are for adding bubbles ###
+########################################################
+
+scoochAllDown = (n) ->
+  r = bubbleMatrix.length
+  while r > 0
+    r--
+    n = bubbleMatrix[r].length
+    while n > 0# bubbleMatrix[r].length
+      n--
+      if !isMatrixLocEmpty({row: r, num: n})
+        moveBubble({row:r, num: n}, {row: r+1, num: n})
+    #   n--
+    # r--
+  toggleMatrixPosition()
+
+moveBubble = (oldloc, newloc) ->
+  div = getDivFromLoc(oldloc)
+  div.attr("data-matrow", newloc.row).attr("data-matnum", newloc.num)
+  div.css("bottom", bubbleMatrix[newloc.row][newloc.num].y)
+  div.css("left", bubbleMatrix[newloc.row][newloc.num].x)
+  div.text(newloc.row+","+newloc.num)
+
+  bubbleMatrix[newloc.row][newloc.num].div = bubbleMatrix[oldloc.row][oldloc.num].div
+  bubbleMatrix[newloc.row][newloc.num].color = bubbleMatrix[oldloc.row][oldloc.num].color
+  bubbleMatrix[oldloc.row][oldloc.num].div = undefined
+  bubbleMatrix[oldloc.row][oldloc.num].color = undefined
+
 
 #####################################################################
 ### The next set of functions are for returning clusters of color ###
@@ -365,8 +456,10 @@ jQuery.fn.putInMatrix = (loc) ->
         r++
 
       drop(looseguys, "drop")
-      # console.log "drops", drops
-      # window.drops = drops
+
+      oldScore = parseInt($("#score").text())
+      newScore = oldScore+looseguys.length
+      $("#score").text(newScore) # do something fancier here
     )
   else
     if loc.row > 10

@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, MAX_ANGLE, SPEED, bubbleMatrix, checkCluster, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, shooting, stringifyLoc;
+var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, MAX_ANGLE, SPEED, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, currMatrix, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, moveBubble, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition;
 
 BUBBLE_BORDER = 5;
 
@@ -11,6 +11,12 @@ SPEED = 20;
 MAX_ANGLE = 75;
 
 bubbleMatrix = [];
+
+bubbleMatrixOne = [];
+
+bubbleMatrixTwo = [];
+
+currMatrix = "";
 
 shooting = false;
 
@@ -97,9 +103,11 @@ $(document).ready(function() {
   xNum = Math.floor(w / (BUBBLE_RADIUS * 2) - 0.5);
   yNum = Math.floor(h / (BUBBLE_RADIUS * 2) - 0.5) * 1.5 - 1;
   margin = (w - (xNum + 0.5) * BUBBLE_RADIUS * 2) / 2;
+  bubbleMatrixOne = [];
   bubbleMatrix = [];
   j = 0;
   while (j < yNum) {
+    bubbleMatrixOne[j] = [];
     bubbleMatrix[j] = [];
     i = 0;
     while (i < xNum) {
@@ -110,6 +118,10 @@ $(document).ready(function() {
         x = i * BUBBLE_RADIUS * 2 + BUBBLE_RADIUS + margin;
       }
       y = h - BUBBLE_RADIUS * j * 1.7;
+      bubbleMatrixOne[j][i] = {
+        x: x,
+        y: y
+      };
       bubbleMatrix[j][i] = {
         x: x,
         y: y
@@ -118,7 +130,59 @@ $(document).ready(function() {
     }
     j++;
   }
+  currMatrix = "one";
+  bubbleMatrixTwo = [];
+  j = 0;
+  while (j < yNum) {
+    bubbleMatrixTwo[j] = [];
+    i = 0;
+    while (i < xNum) {
+      if (j % 2 === 1) {
+        x = i * BUBBLE_RADIUS * 2 + margin;
+        y = h;
+      } else {
+        x = i * BUBBLE_RADIUS * 2 + BUBBLE_RADIUS + margin;
+      }
+      y = h - BUBBLE_RADIUS * j * 1.7;
+      bubbleMatrixTwo[j][i] = {
+        x: x,
+        y: y
+      };
+      i++;
+    }
+    j++;
+  }
 });
+
+toggleMatrixPosition = function() {
+  var bm, div, n, r;
+  console.log("old", currMatrix);
+  if (currMatrix === "one") {
+    bm = bubbleMatrixTwo;
+    currMatrix = "two";
+  } else {
+    bm = bubbleMatrixOne;
+    currMatrix = "one";
+  }
+  r = 0;
+  while (r < bm.length) {
+    n = 0;
+    while (n < bm[r].length) {
+      bubbleMatrix[r][n].x = bm[r][n].x;
+      bubbleMatrix[r][n].y = bm[r][n].y;
+      if (!isMatrixLocEmpty({
+        row: r,
+        num: n
+      })) {
+        div = $(".point[data-matrow='" + r + "'][data-matnum='" + n + "']");
+        div.css("left", bm[r][n].x + "px").css("bottom", bm[r][n].y);
+      }
+      n++;
+    }
+    r++;
+  }
+  console.log("new", currMatrix);
+};
 
 
 /* The next set of functions are for getting the bubble to shoot */
@@ -198,6 +262,47 @@ findClosestInMatrix = function(x, y) {
     i++;
   }
   return minMatrix;
+};
+
+
+/* The next set of functions are for adding bubbles */
+
+scoochAllDown = function(n) {
+  var r;
+  r = bubbleMatrix.length;
+  while (r > 0) {
+    r--;
+    n = bubbleMatrix[r].length;
+    while (n > 0) {
+      n--;
+      if (!isMatrixLocEmpty({
+        row: r,
+        num: n
+      })) {
+        moveBubble({
+          row: r,
+          num: n
+        }, {
+          row: r + 1,
+          num: n
+        });
+      }
+    }
+  }
+  return toggleMatrixPosition();
+};
+
+moveBubble = function(oldloc, newloc) {
+  var div;
+  div = getDivFromLoc(oldloc);
+  div.attr("data-matrow", newloc.row).attr("data-matnum", newloc.num);
+  div.css("bottom", bubbleMatrix[newloc.row][newloc.num].y);
+  div.css("left", bubbleMatrix[newloc.row][newloc.num].x);
+  div.text(newloc.row + "," + newloc.num);
+  bubbleMatrix[newloc.row][newloc.num].div = bubbleMatrix[oldloc.row][oldloc.num].div;
+  bubbleMatrix[newloc.row][newloc.num].color = bubbleMatrix[oldloc.row][oldloc.num].color;
+  bubbleMatrix[oldloc.row][oldloc.num].div = void 0;
+  return bubbleMatrix[oldloc.row][oldloc.num].color = void 0;
 };
 
 
@@ -378,7 +483,7 @@ jQuery.fn.putInMatrix = function(loc) {
   sameColorLocs = checkCluster(loc, true);
   if (sameColorLocs.length >= 3) {
     drop(sameColorLocs, "fade", function() {
-      var b, furthest, i, l, loc_i, looseguys, n, r, topsChecked, wallcluster, _i, _len, _ref;
+      var b, furthest, i, l, loc_i, looseguys, n, newScore, oldScore, r, topsChecked, wallcluster, _i, _len, _ref;
       topsChecked = [];
       i = 0;
       _ref = bubbleMatrix[0];
@@ -424,7 +529,10 @@ jQuery.fn.putInMatrix = function(loc) {
         }
         r++;
       }
-      return drop(looseguys, "drop");
+      drop(looseguys, "drop");
+      oldScore = parseInt($("#score").text());
+      newScore = oldScore + looseguys.length;
+      return $("#score").text(newScore);
     });
   } else {
     if (loc.row > 10) {
