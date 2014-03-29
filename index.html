@@ -7,7 +7,7 @@
     <link href="public/css/libraries.css" rel="stylesheet">
 
     <link href="public/css/application.css" rel="stylesheet">
-    <script type="text/javascript" src="public/js/application.min.js"></script>
+    <script type="text/javascript" src="public/js/application.js"></script>
 
     <meta name="viewport" content="width=640" />
   </head>
@@ -78,7 +78,14 @@
     </div>
 
     <div class="container">
-      <div id="score-container">Score: <span id="score">0</span></div>
+      <div id="top-container">
+        <div id="pause-button" class="btn-pause" style="float: left">Pause</div>
+        <div style="float: right">
+          <div id="timer-container"><span id="timer"></span> secs until next row</div>
+          <div id="score-container">Score: <span id="score">0</span></div>
+        </div>
+        <div class="clearfix"></div>
+      </div>
       <div id="popper-container"></div>
       <div id="debug" style="display:none">
         <strong>Debug</strong><br />

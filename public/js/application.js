@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DROP_MULTIPLER, MAX_ANGLE, ROW_COUNTER_CEILING, SPEED, addRow, addRowCounter, addRows, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, currMatrix, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, moveBubble, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition;
+var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_COUNTER_CEILING, ROW_COUNTER_INTERVAL, SPEED, addRow, addRowCounter, addRows, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
 
 BUBBLE_BORDER = 5;
 
@@ -12,9 +12,15 @@ MAX_ANGLE = 75;
 
 BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"];
 
-ROW_COUNTER_CEILING = 10;
+ROW_COUNTER_CEILING = 10000;
+
+ROW_COUNTER_INTERVAL = 15;
+
+MAX_ROW_NUM = 10;
 
 DROP_MULTIPLER = 2;
+
+DEFAULT_ROWS = 3;
 
 addRowCounter = 0;
 
@@ -22,7 +28,11 @@ shooting = false;
 
 currMatrix = "";
 
-gameover = false;
+isGameOver = false;
+
+isPaused = false;
+
+isWon = false;
 
 bubbleMatrix = [];
 
@@ -31,26 +41,35 @@ bubbleMatrixOne = [];
 bubbleMatrixTwo = [];
 
 $(document).ready(function() {
-  var currColor, currColorClass, gameoverlay, h, i, j, margin, rand, shooter, shooterbase, shootercontrol, shooteroverlay, w, x, xNum, y, yNum;
+  var addRowCounterSecs, currColor, currColorClass, gameoverlay, h, i, j, margin, noticeoverlay, pauseoverlay, rand, shooter, shooterbase, shootercontrol, shooteroverlay, w, winoverlay, x, xNum, y, yNum;
   console.log("Pop It!");
+  $("#timer").text(ROW_COUNTER_INTERVAL);
   shooter = $("<div class='popper-shooter'></div>");
   shootercontrol = $("<div id='shooter-control'></div>");
   shooterbase = $("<div id='shooter-base'></div>");
   shooteroverlay = $("<div id='shooter-control-overlay'></div>");
   gameoverlay = $("<div id='gameover'></div>");
   gameoverlay.append("<div style='color: #300; text-align: center; font-size: 60px; margin-top: 200px'><strong>Game Over <i class='fa fa-frown-o'></i></strong></div>");
+  pauseoverlay = $("<div id='pause'></div>");
+  pauseoverlay.append("<div style='color: #333; text-align: center; font-size: 60px; margin-top: 200px'><strong>Paused o_O</strong></div>");
+  winoverlay = $("<div id='victory'></div>");
+  winoverlay.append("<div style='color: #333; text-align: center; font-size: 60px; margin-top: 200px'><strong>VICTORY!  <i class='fa fa-smile-o'></i></strong></div>");
+  noticeoverlay = $("<div id='notice-overlay'>asdf</div>");
   $("#popper-container").append(shootercontrol);
   $("#popper-container").append(shooterbase);
   $("#popper-container").append(shooteroverlay);
   $("#popper-container").append(gameoverlay);
+  $("#popper-container").append(pauseoverlay);
+  $("#popper-container").append(winoverlay);
   $("#popper-container").append(shooter);
+  $("#popper-container").append(noticeoverlay);
   rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
   currColor = BUBBLE_OPTIONS[rand];
   currColorClass = "popper-" + currColor;
   $(".popper-shooter").addClass(currColorClass);
   shooteroverlay.mousemove(function(e) {
     var rotatedeg;
-    if (!gameover) {
+    if (!(isGameOver || isPaused || isWon)) {
       rotatedeg = (e.pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE;
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg);
       rotatedeg = Math.min(MAX_ANGLE, rotatedeg);
@@ -61,7 +80,7 @@ $(document).ready(function() {
   });
   shooteroverlay.bind("touchmove", function(e) {
     var rotatedeg;
-    if (!gameover) {
+    if (!(isGameOver || isPaused || isWon)) {
       e.preventDefault();
       rotatedeg = (e.originalEvent.touches[0].pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE;
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg);
@@ -73,7 +92,7 @@ $(document).ready(function() {
   });
   shooteroverlay.click(function(e) {
     var i, rotatedeg;
-    if (!shooting && !gameover) {
+    if (!shooting && !isGameOver && !isPaused && !isWon) {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
@@ -95,7 +114,7 @@ $(document).ready(function() {
   });
   shooteroverlay.bind("touchend", function(e) {
     var i, rotatedeg;
-    if (!shooting && !gameover) {
+    if (!shooting && !isGameOver && !isPaused && !isWon) {
       e.preventDefault();
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
@@ -170,8 +189,34 @@ $(document).ready(function() {
     }
     j++;
   }
-  addRows(3);
+  addRows(DEFAULT_ROWS);
+  addRowCounterSecs = ROW_COUNTER_INTERVAL;
+  window.addrow = setInterval((function() {
+    if (isPaused === false) {
+      $("#timer").text(addRowCounterSecs);
+      addRowCounterSecs--;
+      if (addRowCounterSecs < 1) {
+        addRow();
+        return addRowCounterSecs = ROW_COUNTER_INTERVAL;
+      }
+    }
+  }), 1000);
+  $("#pause-button").click(function() {
+    if (isPaused === false) {
+      pause();
+      return $(this).text("Unpause");
+    } else {
+      unpause();
+      return $(this).text("Pause");
+    }
+  });
 });
+
+noticeFlash = function(str) {
+  return $("#notice-overlay").text(str).show().fadeOut({
+    duration: 1200
+  });
+};
 
 
 /* The next set of functions are for getting the bubble to shoot */
@@ -305,7 +350,9 @@ addRow = function(colors) {
 };
 
 scoochAllDown = function(n) {
-  var r;
+  var furthestRow, furthestRowReached, r;
+  furthestRow = 0;
+  furthestRowReached = false;
   r = bubbleMatrix.length;
   while (r > 0) {
     r--;
@@ -323,10 +370,17 @@ scoochAllDown = function(n) {
           row: r + 1,
           num: n
         });
+        if (furthestRowReached === false) {
+          furthestRowReached = true;
+          furthestRow = r + 1;
+        }
       }
     }
   }
-  return toggleMatrixPosition();
+  toggleMatrixPosition();
+  if (furthestRow > MAX_ROW_NUM) {
+    return gameOver();
+  }
 };
 
 moveBubble = function(oldloc, newloc) {
@@ -532,6 +586,54 @@ getDivFromLoc = function(loc) {
   return div;
 };
 
+gameOver = function() {
+  $("#gameover").show();
+  isGameOver = true;
+  clearInterval(window.addrow);
+  shooting = false;
+  return $("#pause-button").addClass("disabled");
+};
+
+pause = function() {
+  $("#pause").show();
+  return isPaused = true;
+};
+
+unpause = function() {
+  $("#pause").hide();
+  return isPaused = false;
+};
+
+win = function() {
+  $("#victory").show();
+  clearInterval(window.addrow);
+  isWon = true;
+  shooting = false;
+  return $("#pause-button").addClass("disabled");
+};
+
+checkIfWon = function() {
+  var didIWin, l, n, r;
+  didIWin = true;
+  r = 0;
+  while (r < bubbleMatrix.length) {
+    n = 0;
+    while (n < bubbleMatrix[r].length) {
+      l = {
+        row: r,
+        num: n
+      };
+      if (!isMatrixLocEmpty(l)) {
+        didIWin = false;
+        break;
+      }
+      n++;
+    }
+    r++;
+  }
+  return didIWin;
+};
+
 
 /* jQuery add ons, mostly relatied to shooting a bubble */
 
@@ -565,7 +667,7 @@ jQuery.fn.putInMatrix = function(loc, pop) {
     if (sameColorLocs.length >= 3) {
       oldScore = parseInt($("#score").text());
       drop(sameColorLocs, "fade", function() {
-        var b, furthest, i, l, loc_i, looseguys, n, r, topsChecked, wallcluster, _i, _len, _ref;
+        var b, bonuspts, furthest, i, l, loc_i, looseguys, n, r, topsChecked, wallcluster, _i, _len, _ref;
         topsChecked = [];
         i = 0;
         _ref = bubbleMatrix[0];
@@ -611,18 +713,31 @@ jQuery.fn.putInMatrix = function(loc, pop) {
           }
           r++;
         }
-        drop(looseguys, "drop");
+        drop(looseguys, "drop", function() {
+          if (checkIfWon() === true) {
+            return win();
+          }
+        });
+        if (checkIfWon() === true) {
+          win();
+        }
+        if (looseguys.length > 0) {
+          bonuspts = looseguys.length * DROP_MULTIPLER - 1;
+          if (bonuspts > 1) {
+            noticeFlash("Bonus " + looseguys.length * (DROP_MULTIPLER - 1) + " points!!");
+          } else if (bonuspts === 1) {
+            noticeFlash("Bonus " + looseguys.length * (DROP_MULTIPLER - 1) + " point!");
+          }
+        }
         deltaScore += Math.ceil(looseguys.length * DROP_MULTIPLER);
         return $("#score").text(oldScore + deltaScore);
       });
     } else {
-      if (loc.row > 10) {
-        $("#gameover").show();
-        gameover = true;
+      if (loc.row > MAX_ROW_NUM) {
+        gameOver();
         div = $(".point").last();
         div.css("background-color", "#DDD").css("border-color", "#BBB");
         div.putInMatrix(prevMatrixLoc);
-        shooting = false;
       }
     }
     if (sameColorLocs.length >= 3) {
