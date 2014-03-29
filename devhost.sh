@@ -1,1 +1,0 @@
-rsync -e "/usr/bin/ssh" --exclude ".git" --exclude "*.sh" --exclude "gulpfile.js" --exclude /node_modules/ --exclude /coffee/ --exclude /scss/ --bwlimit=2000 -av /Users/nyl/Dropbox/NeuralFiringsWeb/BAM/www/ nyl@neuralfirings.com:neuralfirings.com/popperdev
