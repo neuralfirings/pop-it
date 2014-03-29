@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, MAX_ANGLE, SPEED, addRow, addRowCeiling, addRowCounter, addRows, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, currMatrix, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, moveBubble, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition;
+var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DROP_MULTIPLER, MAX_ANGLE, ROW_COUNTER_CEILING, SPEED, addRow, addRowCounter, addRows, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, currMatrix, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, moveBubble, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition;
 
 BUBBLE_BORDER = 5;
 
@@ -10,23 +10,25 @@ SPEED = 20;
 
 MAX_ANGLE = 75;
 
+BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"];
+
+ROW_COUNTER_CEILING = 10;
+
+DROP_MULTIPLER = 2;
+
+addRowCounter = 0;
+
+shooting = false;
+
+currMatrix = "";
+
+gameover = false;
+
 bubbleMatrix = [];
 
 bubbleMatrixOne = [];
 
 bubbleMatrixTwo = [];
-
-currMatrix = "";
-
-shooting = false;
-
-gameover = false;
-
-BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"];
-
-addRowCounter = 0;
-
-addRowCeiling = 10;
 
 $(document).ready(function() {
   var currColor, currColorClass, gameoverlay, h, i, j, margin, rand, shooter, shooterbase, shootercontrol, shooteroverlay, w, x, xNum, y, yNum;
@@ -75,7 +77,7 @@ $(document).ready(function() {
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
       addRowCounter += Math.floor(Math.random() * 2) + 1;
-      if (addRowCounter > addRowCeiling) {
+      if (addRowCounter > ROW_COUNTER_CEILING) {
         addRow();
         addRowCounter = 0;
       }
@@ -98,7 +100,7 @@ $(document).ready(function() {
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
       addRowCounter += Math.floor(Math.random() * 2) + 1;
-      if (addRowCounter > addRowCeiling) {
+      if (addRowCounter > ROW_COUNTER_CEILING) {
         addRow();
         addRowCounter = 0;
       }
@@ -609,7 +611,7 @@ jQuery.fn.putInMatrix = function(loc, pop) {
           r++;
         }
         drop(looseguys, "drop");
-        deltaScore += Math.ceil(looseguys.length * 1.5);
+        deltaScore += Math.ceil(looseguys.length * DROP_MULTIPLER);
         return $("#score").text(oldScore + deltaScore);
       });
     } else {
