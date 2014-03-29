@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_RADIUS, CONTAINER_BORDER, MAX_ANGLE, SPEED, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, currMatrix, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, moveBubble, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition;
+var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, MAX_ANGLE, SPEED, addRow, addRowCeiling, addRowCounter, addRows, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, currMatrix, drop, findClosestInMatrix, gameover, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isMatrixLocEmpty, lookAround, moveBubble, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition;
 
 BUBBLE_BORDER = 5;
 
@@ -22,8 +22,14 @@ shooting = false;
 
 gameover = false;
 
+BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"];
+
+addRowCounter = 0;
+
+addRowCeiling = 10;
+
 $(document).ready(function() {
-  var colors, currColor, currColorClass, gameoverlay, h, i, j, margin, rand, shooter, shooterbase, shootercontrol, shooteroverlay, w, x, xNum, y, yNum;
+  var currColor, currColorClass, gameoverlay, h, i, j, margin, rand, shooter, shooterbase, shootercontrol, shooteroverlay, w, x, xNum, y, yNum;
   shooter = $("<div class='popper-shooter'></div>");
   shootercontrol = $("<div id='shooter-control'></div>");
   shooterbase = $("<div id='shooter-base'></div>");
@@ -35,9 +41,8 @@ $(document).ready(function() {
   $("#popper-container").append(shooteroverlay);
   $("#popper-container").append(gameoverlay);
   $("#popper-container").append(shooter);
-  colors = ["red", "green", "yellow", "blue"];
-  rand = Math.floor(Math.random() * colors.length);
-  currColor = colors[rand];
+  rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
+  currColor = BUBBLE_OPTIONS[rand];
   currColorClass = "popper-" + currColor;
   $(".popper-shooter").addClass(currColorClass);
   shooteroverlay.mousemove(function(e) {
@@ -69,13 +74,18 @@ $(document).ready(function() {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
+      addRowCounter += Math.floor(Math.random() * 2) + 1;
+      if (addRowCounter > addRowCeiling) {
+        addRow();
+        addRowCounter = 0;
+      }
       i = 0;
-      while (i < colors.length) {
-        $(".popper-shooter").removeClass("popper-" + colors[i]);
+      while (i < BUBBLE_OPTIONS.length) {
+        $(".popper-shooter").removeClass("popper-" + BUBBLE_OPTIONS[i]);
         i++;
       }
-      rand = Math.floor(Math.random() * colors.length);
-      currColor = colors[rand];
+      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
+      currColor = BUBBLE_OPTIONS[rand];
       currColorClass = "popper-" + currColor;
       $(".popper-shooter").addClass(currColorClass);
     }
@@ -87,13 +97,18 @@ $(document).ready(function() {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
+      addRowCounter += Math.floor(Math.random() * 2) + 1;
+      if (addRowCounter > addRowCeiling) {
+        addRow();
+        addRowCounter = 0;
+      }
       i = 0;
-      while (i < colors.length) {
-        $(".popper-shooter").removeClass("popper-" + colors[i]);
+      while (i < BUBBLE_OPTIONS.length) {
+        $(".popper-shooter").removeClass("popper-" + BUBBLE_OPTIONS[i]);
         i++;
       }
-      rand = Math.floor(Math.random() * colors.length);
-      currColor = colors[rand];
+      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
+      currColor = BUBBLE_OPTIONS[rand];
       currColorClass = "popper-" + currColor;
       $(".popper-shooter").addClass(currColorClass);
     }
@@ -152,37 +167,8 @@ $(document).ready(function() {
     }
     j++;
   }
+  addRows(3);
 });
-
-toggleMatrixPosition = function() {
-  var bm, div, n, r;
-  console.log("old", currMatrix);
-  if (currMatrix === "one") {
-    bm = bubbleMatrixTwo;
-    currMatrix = "two";
-  } else {
-    bm = bubbleMatrixOne;
-    currMatrix = "one";
-  }
-  r = 0;
-  while (r < bm.length) {
-    n = 0;
-    while (n < bm[r].length) {
-      bubbleMatrix[r][n].x = bm[r][n].x;
-      bubbleMatrix[r][n].y = bm[r][n].y;
-      if (!isMatrixLocEmpty({
-        row: r,
-        num: n
-      })) {
-        div = $(".point[data-matrow='" + r + "'][data-matnum='" + n + "']");
-        div.css("left", bm[r][n].x + "px").css("bottom", bm[r][n].y);
-      }
-      n++;
-    }
-    r++;
-  }
-  console.log("new", currMatrix);
-};
 
 
 /* The next set of functions are for getting the bubble to shoot */
@@ -267,6 +253,54 @@ findClosestInMatrix = function(x, y) {
 
 /* The next set of functions are for adding bubbles */
 
+addRows = function(n) {
+  var i, _results;
+  i = 0;
+  _results = [];
+  while (i < n) {
+    addRow();
+    _results.push(i++);
+  }
+  return _results;
+};
+
+addRow = function(colors) {
+  var color, div, i, loc, num, rand, _i, _j, _len, _len1, _ref, _results;
+  scoochAllDown();
+  if (colors === void 0) {
+    colors = [];
+    _ref = bubbleMatrix[0];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      i = _ref[_i];
+      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
+      colors.push(BUBBLE_OPTIONS[rand]);
+    }
+  } else if (colors.length < bubbleMatrix[0].length) {
+    i = colors.length;
+    while (i < bubbleMatrix[0].length) {
+      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
+      colors.push(BUBBLE_OPTIONS[rand]);
+      i++;
+    }
+  }
+  num = 0;
+  _results = [];
+  for (_j = 0, _len1 = colors.length; _j < _len1; _j++) {
+    color = colors[_j];
+    div = $("#popper-container").createBubble(color).addClass("popper-" + color).text('0,' + num);
+    loc = {
+      row: 0,
+      num: num
+    };
+    div.putInMatrix(loc, false);
+    div.hide().fadeIn({
+      duration: 200
+    });
+    _results.push(num++);
+  }
+  return _results;
+};
+
 scoochAllDown = function(n) {
   var r;
   r = bubbleMatrix.length;
@@ -303,6 +337,34 @@ moveBubble = function(oldloc, newloc) {
   bubbleMatrix[newloc.row][newloc.num].color = bubbleMatrix[oldloc.row][oldloc.num].color;
   bubbleMatrix[oldloc.row][oldloc.num].div = void 0;
   return bubbleMatrix[oldloc.row][oldloc.num].color = void 0;
+};
+
+toggleMatrixPosition = function() {
+  var bm, div, n, r;
+  if (currMatrix === "one") {
+    bm = bubbleMatrixTwo;
+    currMatrix = "two";
+  } else {
+    bm = bubbleMatrixOne;
+    currMatrix = "one";
+  }
+  r = 0;
+  while (r < bm.length) {
+    n = 0;
+    while (n < bm[r].length) {
+      bubbleMatrix[r][n].x = bm[r][n].x;
+      bubbleMatrix[r][n].y = bm[r][n].y;
+      if (!isMatrixLocEmpty({
+        row: r,
+        num: n
+      })) {
+        div = $(".point[data-matrow='" + r + "'][data-matnum='" + n + "']");
+        div.css("left", bm[r][n].x + "px").css("bottom", bm[r][n].y);
+      }
+      n++;
+    }
+    r++;
+  }
 };
 
 
@@ -370,10 +432,18 @@ lookAround = function(loc) {
   row = loc.row;
   num = loc.num;
   enviro = [];
-  if (row % 2 === 0) {
-    alt = -1;
+  if (currMatrix === "one") {
+    if (row % 2 === 0) {
+      alt = -1;
+    } else {
+      alt = 0;
+    }
   } else {
-    alt = 0;
+    if (row % 2 === 1) {
+      alt = -1;
+    } else {
+      alt = 0;
+    }
   }
   enviro.push({
     row: row - 1,
@@ -462,16 +532,22 @@ getDivFromLoc = function(loc) {
 
 /* jQuery add ons, mostly relatied to shooting a bubble */
 
-jQuery.fn.createBubble = function() {
+jQuery.fn.createBubble = function(color) {
   var div;
   div = $("<div class='point'></div>");
   div.css("width", BUBBLE_RADIUS * 2 + "px").css("height", BUBBLE_RADIUS * 2 + "px").css("border-width", BUBBLE_BORDER + "px");
+  if (color !== void 0) {
+    div.attr("data-color", color);
+  }
   $(this[0]).append(div);
   return div;
 };
 
-jQuery.fn.putInMatrix = function(loc) {
+jQuery.fn.putInMatrix = function(loc, pop) {
   var coords, div, sameColorLocs;
+  if (pop === void 0) {
+    pop = true;
+  }
   div = $(this[0]);
   bubbleMatrix[loc.row][loc.num].div = div;
   bubbleMatrix[loc.row][loc.num].color = div.attr("data-color");
@@ -480,68 +556,70 @@ jQuery.fn.putInMatrix = function(loc) {
   div.attr("data-matrow", loc.row);
   div.attr("data-matnum", loc.num);
   div.text(loc.row + ", " + loc.num);
-  sameColorLocs = checkCluster(loc, true);
-  if (sameColorLocs.length >= 3) {
-    drop(sameColorLocs, "fade", function() {
-      var b, furthest, i, l, loc_i, looseguys, n, newScore, oldScore, r, topsChecked, wallcluster, _i, _len, _ref;
-      topsChecked = [];
-      i = 0;
-      _ref = bubbleMatrix[0];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        b = _ref[_i];
-        topsChecked.push(i);
-        i++;
-      }
-      wallcluster = [];
-      i = 0;
-      while (i < topsChecked.length && i < 1000) {
-        loc_i = {
-          row: 0,
-          num: i
-        };
-        if (!isMatrixLocEmpty(loc_i)) {
-          wallcluster = wallcluster.concat(checkCluster(loc_i, false));
-          furthest = _.max(_.where(wallcluster, {
-            row: 0
-          }), function(d) {
-            return d.num;
-          });
-          i = furthest.num + 1;
-        } else {
+  if (pop === true) {
+    sameColorLocs = checkCluster(loc, true);
+    if (sameColorLocs.length >= 3) {
+      drop(sameColorLocs, "fade", function() {
+        var b, furthest, i, l, loc_i, looseguys, n, newScore, oldScore, r, topsChecked, wallcluster, _i, _len, _ref;
+        topsChecked = [];
+        i = 0;
+        _ref = bubbleMatrix[0];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          b = _ref[_i];
+          topsChecked.push(i);
           i++;
         }
-      }
-      looseguys = [];
-      r = 0;
-      while (r < bubbleMatrix.length) {
-        n = 0;
-        while (n < bubbleMatrix[r].length) {
-          l = {
-            row: r,
-            num: n
+        wallcluster = [];
+        i = 0;
+        while (i < topsChecked.length && i < 1000) {
+          loc_i = {
+            row: 0,
+            num: i
           };
-          if (!isMatrixLocEmpty(l)) {
-            if (_.where(wallcluster, l).length === 0) {
-              looseguys.push(l);
-            }
+          if (!isMatrixLocEmpty(loc_i)) {
+            wallcluster = wallcluster.concat(checkCluster(loc_i, false));
+            furthest = _.max(_.where(wallcluster, {
+              row: 0
+            }), function(d) {
+              return d.num;
+            });
+            i = furthest.num + 1;
+          } else {
+            i++;
           }
-          n++;
         }
-        r++;
+        looseguys = [];
+        r = 0;
+        while (r < bubbleMatrix.length) {
+          n = 0;
+          while (n < bubbleMatrix[r].length) {
+            l = {
+              row: r,
+              num: n
+            };
+            if (!isMatrixLocEmpty(l)) {
+              if (_.where(wallcluster, l).length === 0) {
+                looseguys.push(l);
+              }
+            }
+            n++;
+          }
+          r++;
+        }
+        drop(looseguys, "drop");
+        oldScore = parseInt($("#score").text());
+        newScore = oldScore + 1 + looseguys.length * 2;
+        return $("#score").text(newScore);
+      });
+    } else {
+      if (loc.row > 10) {
+        $("#gameover").show();
+        gameover = true;
+        div = $(".point").last();
+        div.css("background-color", "#DDD").css("border-color", "#BBB");
+        div.putInMatrix(prevMatrixLoc);
+        shooting = false;
       }
-      drop(looseguys, "drop");
-      oldScore = parseInt($("#score").text());
-      newScore = oldScore + looseguys.length;
-      return $("#score").text(newScore);
-    });
-  } else {
-    if (loc.row > 10) {
-      $("#gameover").show();
-      gameover = true;
-      div = $(".point").last();
-      div.css("background-color", "#DDD").css("border-color", "#BBB");
-      div.putInMatrix(prevMatrixLoc);
-      shooting = false;
     }
   }
   shooting = false;

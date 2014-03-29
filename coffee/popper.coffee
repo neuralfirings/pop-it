@@ -11,6 +11,9 @@ bubbleMatrixTwo = []
 currMatrix = ""
 shooting = false
 gameover = false
+BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"]
+addRowCounter = 0
+addRowCeiling = 10
 
 $(document).ready ->
 
@@ -28,9 +31,8 @@ $(document).ready ->
   $("#popper-container").append shooter
 
   # Shooter code
-  colors = ["red", "green", "yellow", "blue"]
-  rand = Math.floor(Math.random() * colors.length)
-  currColor = colors[rand]
+  rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
+  currColor = BUBBLE_OPTIONS[rand]
   currColorClass = "popper-" + currColor
   $(".popper-shooter").addClass currColorClass
   shooteroverlay.mousemove (e) ->
@@ -59,13 +61,17 @@ $(document).ready ->
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
-      i = 0
+      addRowCounter += Math.floor(Math.random() * 2)+1
+      if addRowCounter > addRowCeiling
+        addRow()
+        addRowCounter = 0
 
-      while i < colors.length
-        $(".popper-shooter").removeClass "popper-" + colors[i]
+      i = 0
+      while i < BUBBLE_OPTIONS.length
+        $(".popper-shooter").removeClass "popper-" + BUBBLE_OPTIONS[i]
         i++
-      rand = Math.floor(Math.random() * colors.length)
-      currColor = colors[rand]
+      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
+      currColor = BUBBLE_OPTIONS[rand]
       currColorClass = "popper-" + currColor
       $(".popper-shooter").addClass currColorClass
     return
@@ -76,13 +82,17 @@ $(document).ready ->
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
-      i = 0
+      addRowCounter += Math.floor(Math.random() * 2)+1
+      if addRowCounter > addRowCeiling
+        addRow()
+        addRowCounter = 0
 
-      while i < colors.length
-        $(".popper-shooter").removeClass "popper-" + colors[i]
+      i = 0
+      while i < BUBBLE_OPTIONS.length
+        $(".popper-shooter").removeClass "popper-" + BUBBLE_OPTIONS[i]
         i++
-      rand = Math.floor(Math.random() * colors.length)
-      currColor = colors[rand]
+      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
+      currColor = BUBBLE_OPTIONS[rand]
       currColorClass = "popper-" + currColor
       $(".popper-shooter").addClass currColorClass
     return
@@ -141,32 +151,10 @@ $(document).ready ->
     j++
 
   # useMatrixPosition(bubbleMatrixOne)
+  addRows(3)
+  # addRow(["red", "red", "yellow", "yellow", "green", "green", "blue", "blue"])
   return
 
-
-toggleMatrixPosition = () ->
-  console.log "old", currMatrix
-  if currMatrix == "one"
-    bm = bubbleMatrixTwo
-    currMatrix = "two"
-  else
-    bm = bubbleMatrixOne
-    currMatrix = "one"
-
-  r = 0
-  while r < bm.length
-    n = 0
-    while n < bm[r].length
-      bubbleMatrix[r][n].x = bm[r][n].x
-      bubbleMatrix[r][n].y = bm[r][n].y
-      if(!isMatrixLocEmpty({row:r, num:n}))
-        div = $(".point[data-matrow='" + r + "'][data-matnum='" + n + "']")
-        div.css("left", bm[r][n].x + "px").css("bottom", bm[r][n].y)
-      n++
-    r++
-
-  console.log "new", currMatrix
-  return 
 
 
 
@@ -258,6 +246,45 @@ findClosestInMatrix = (x, y) ->
 ########################################################
 ### The next set of functions are for adding bubbles ###
 ########################################################
+addRows = (n) ->
+  i = 0
+  while i < n 
+    addRow()
+    i++
+
+addRow = (colors) ->
+
+  scoochAllDown()
+  # toggleMatrixPosition()
+
+  # assumes adding a complete row
+  if (colors == undefined)
+    colors = []
+    for i in bubbleMatrix[0]
+      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
+      colors.push BUBBLE_OPTIONS[rand]
+  else if (colors.length < bubbleMatrix[0].length)
+    i = colors.length
+    while i < bubbleMatrix[0].length
+      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
+      colors.push BUBBLE_OPTIONS[rand]
+      i++
+
+
+  num = 0
+  for color in colors
+    div = $("#popper-container").createBubble(color).addClass("popper-" + color).text('0,'+num)
+    # console.log div
+    # div.drawAt(bubbleMatrix[0][num].x, bubbleMatrix[0][num].y)
+    loc = {row: 0, num: num}
+    div.putInMatrix loc, false
+    div.hide().fadeIn({duration: 200})
+    num++
+
+
+          # p = $("#popper-container").createBubble().addClass("opt2").css("border-color", "#BBB").css("opacity", ".5").text(j+','+i)
+      # p.drawAt(x, y)
+
 
 scoochAllDown = (n) ->
   r = bubbleMatrix.length
@@ -273,6 +300,7 @@ scoochAllDown = (n) ->
   toggleMatrixPosition()
 
 moveBubble = (oldloc, newloc) ->
+  # TO DO: add some animation here
   div = getDivFromLoc(oldloc)
   div.attr("data-matrow", newloc.row).attr("data-matnum", newloc.num)
   div.css("bottom", bubbleMatrix[newloc.row][newloc.num].y)
@@ -284,6 +312,27 @@ moveBubble = (oldloc, newloc) ->
   bubbleMatrix[oldloc.row][oldloc.num].div = undefined
   bubbleMatrix[oldloc.row][oldloc.num].color = undefined
 
+toggleMatrixPosition = () ->
+  if currMatrix == "one"
+    bm = bubbleMatrixTwo
+    currMatrix = "two"
+  else
+    bm = bubbleMatrixOne
+    currMatrix = "one"
+
+  r = 0
+  while r < bm.length
+    n = 0
+    while n < bm[r].length
+      bubbleMatrix[r][n].x = bm[r][n].x
+      bubbleMatrix[r][n].y = bm[r][n].y
+      if(!isMatrixLocEmpty({row:r, num:n}))
+        div = $(".point[data-matrow='" + r + "'][data-matnum='" + n + "']")
+        div.css("left", bm[r][n].x + "px").css("bottom", bm[r][n].y)
+      n++
+    r++
+
+  return 
 
 #####################################################################
 ### The next set of functions are for returning clusters of color ###
@@ -299,6 +348,7 @@ checkCluster = (loc, checkColor, n, checkedBefore) ->
   if checkedBefore is undefined # new check
     checkedBefore = []
 
+  # TO DO : convert this to use underscore.js
   checkedBefore.push stringifyLoc(loc)
   arr = [loc] # [stringifyLoc(loc)] # turning this on returns readable stuff in console.log
   if n < 1000 # in case of infinite loop
@@ -337,10 +387,17 @@ lookAround = (loc) ->
   row = loc.row 
   num = loc.num 
   enviro = []
-  if row % 2 is 0 # even vs. odd row
-    alt = -1
+  if currMatrix == "one"
+    if row % 2 is 0 # even vs. odd row
+      alt = -1
+    else
+      alt = 0
   else
-    alt = 0
+    if row % 2 is 1 # even vs. odd row
+      alt = -1
+    else
+      alt = 0
+
   
   enviro.push { row: row-1, num: num+alt }
   enviro.push { row: row-1, num: num+alt+1 }
@@ -400,13 +457,17 @@ getDivFromLoc = (loc) ->
 ### jQuery add ons, mostly relatied to shooting a bubble ###
 ############################################################
 
-jQuery.fn.createBubble = ->
+jQuery.fn.createBubble = (color) ->
   div = $("<div class='point'></div>")
   div.css("width", BUBBLE_RADIUS * 2 + "px").css("height", BUBBLE_RADIUS * 2 + "px").css "border-width", BUBBLE_BORDER + "px"
+  if color != undefined
+    div.attr("data-color", color)
   $(this[0]).append div
   div
 
-jQuery.fn.putInMatrix = (loc) ->
+jQuery.fn.putInMatrix = (loc, pop) ->
+  if pop == undefined
+    pop = true
   div = $(this[0])
   bubbleMatrix[loc.row][loc.num].div = div
   bubbleMatrix[loc.row][loc.num].color = div.attr("data-color")
@@ -417,59 +478,58 @@ jQuery.fn.putInMatrix = (loc) ->
   div.text loc.row + ", " + loc.num
 
   # check for similar colors and for those with greater than three, drop them like their hot
-  sameColorLocs = checkCluster(loc, true)
-  if sameColorLocs.length >= 3
-    drop(sameColorLocs, "fade", () ->
-      topsChecked = []
-      i=0
-      for b in bubbleMatrix[0]
-        topsChecked.push(i)
-        i++
-
-      wallcluster = []
-      i=0
-      while i<topsChecked.length and i < 1000
-        loc_i = 
-          row: 0
-          num: i
-        if !isMatrixLocEmpty(loc_i)
-          wallcluster = wallcluster.concat checkCluster(loc_i, false)
-          furthest = _.max(_.where(wallcluster, {row: 0}), (d) -> 
-            return d.num; 
-          )
-          i = furthest.num+1
-        else
+  if pop == true
+    sameColorLocs = checkCluster(loc, true)
+    if sameColorLocs.length >= 3
+      drop(sameColorLocs, "fade", () ->
+        topsChecked = []
+        i=0
+        for b in bubbleMatrix[0]
+          topsChecked.push(i)
           i++
-      # console.log "wallcluster", wallcluster
 
-      # TEAM BRUTE FORCE!!! :D 
-      looseguys = []
-      r = 0
-      while r < bubbleMatrix.length
-        n = 0
-        while n < bubbleMatrix[r].length
-          l = {row: r, num: n}
-          if !isMatrixLocEmpty(l)
-            if _.where(wallcluster, l).length == 0 
-              looseguys.push l #bubbleMatrix[r][n].div
-          n++
-        r++
+        wallcluster = []
+        i=0
+        while i<topsChecked.length and i < 1000
+          loc_i = 
+            row: 0
+            num: i
+          if !isMatrixLocEmpty(loc_i)
+            wallcluster = wallcluster.concat checkCluster(loc_i, false)
+            furthest = _.max(_.where(wallcluster, {row: 0}), (d) -> 
+              return d.num; 
+            )
+            i = furthest.num+1
+          else
+            i++
 
-      drop(looseguys, "drop")
+        # TEAM BRUTE FORCE!!! :D 
+        looseguys = []
+        r = 0
+        while r < bubbleMatrix.length
+          n = 0
+          while n < bubbleMatrix[r].length
+            l = {row: r, num: n}
+            if !isMatrixLocEmpty(l)
+              if _.where(wallcluster, l).length == 0 
+                looseguys.push l #bubbleMatrix[r][n].div
+            n++
+          r++
 
-      oldScore = parseInt($("#score").text())
-      newScore = oldScore+looseguys.length
-      $("#score").text(newScore) # do something fancier here
-    )
-  else
-    if loc.row > 10
-      $("#gameover").show()
-      gameover = true
-      div = $(".point").last()
-      div.css("background-color", "#DDD").css("border-color", "#BBB")
-      div.putInMatrix prevMatrixLoc
-      shooting = false
+        drop(looseguys, "drop")
 
+        oldScore = parseInt($("#score").text())
+        newScore = oldScore + 1 +  looseguys.length*2 # not quite sure how this works
+        $("#score").text(newScore) # do something fancier here
+      )
+    else
+      if loc.row > 10
+        $("#gameover").show()
+        gameover = true
+        div = $(".point").last()
+        div.css("background-color", "#DDD").css("border-color", "#BBB")
+        div.putInMatrix prevMatrixLoc
+        shooting = false
   shooting = false 
   return
 
