@@ -19,6 +19,7 @@ bubbleMatrixOne = [] # because of the hexagonal thing
 bubbleMatrixTwo = [] # because of the hexagonal thing
 
 $(document).ready ->
+  console.log("Pop It!")
 
   shooter = $("<div class='popper-shooter'></div>")
   shootercontrol = $("<div id='shooter-control'></div>")
@@ -88,7 +89,7 @@ $(document).ready ->
       addRowCounter += Math.floor(Math.random() * 2)+1
       if addRowCounter > ROW_COUNTER_CEILING
         addRow()
-        addRowCounter = 0
+        addRowCounter = 0 
 
       i = 0
       while i < BUBBLE_OPTIONS.length
