@@ -463,18 +463,29 @@ drop = (locs, type, callback) ->
   else
     locs = [locs]
 
-  toploc = _.min(locs, (d) ->
-    return d.row; 
-  )
-  toprow = toploc.row
+  if type == "drop"
+    toploc = _.min(locs, (d) ->
+      return d.row; 
+    )
+    topRow = toploc.row
+    topRowDFB = bubbleMatrix[topRow][0].y - $("#popper-container").height()
+    console.log "topRowDFB", topRowDFB
+    # DFB = distance from top, where it should end up when dropped
+
+
   for l in locs
+    # clear matrix
     bubbleMatrix[l.row][l.num].color = undefined
     bubbleMatrix[l.row][l.num].div = undefined
-    ldiv = getDivFromLoc(l)
-    b = parseInt(ldiv.css("bottom"))
-    # console.log type, l.row, toploc.row, l.row-toploc.row+1, (b-$("#popper-container").height())*((l.row-toploc.row+1)*3+1)
-    target = (b-$("#popper-container").height())*((l.row-toploc.row+1)*3+1) # speed of droppings
+
     if type == "drop"
+      # calculate where l should end up
+      target = topRowDFB
+      multipler = Math.pow(l.row - topRow + 1, 1.1) # lower rows to drop faster
+      delta = -50*multipler
+      target = target+delta 
+
+      ldiv = getDivFromLoc(l)
       ldiv.animate(
         { bottom: target + "px"}, 
         { duration: 600, complete: () ->

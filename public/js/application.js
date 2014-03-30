@@ -537,24 +537,30 @@ lookAround = function(loc) {
 };
 
 drop = function(locs, type, callback) {
-  var b, l, ldiv, target, toploc, toprow, _i, _len;
+  var delta, l, ldiv, multipler, target, topRow, topRowDFB, toploc, _i, _len;
   if (locs instanceof Array) {
     locs = locs;
   } else {
     locs = [locs];
   }
-  toploc = _.min(locs, function(d) {
-    return d.row;
-  });
-  toprow = toploc.row;
+  if (type === "drop") {
+    toploc = _.min(locs, function(d) {
+      return d.row;
+    });
+    topRow = toploc.row;
+    topRowDFB = bubbleMatrix[topRow][0].y - $("#popper-container").height();
+    console.log("topRowDFB", topRowDFB);
+  }
   for (_i = 0, _len = locs.length; _i < _len; _i++) {
     l = locs[_i];
     bubbleMatrix[l.row][l.num].color = void 0;
     bubbleMatrix[l.row][l.num].div = void 0;
-    ldiv = getDivFromLoc(l);
-    b = parseInt(ldiv.css("bottom"));
-    target = (b - $("#popper-container").height()) * ((l.row - toploc.row + 1) * 3 + 1);
     if (type === "drop") {
+      target = topRowDFB;
+      multipler = Math.pow(l.row - topRow + 1, 1.1);
+      delta = -50 * multipler;
+      target = target + delta;
+      ldiv = getDivFromLoc(l);
       ldiv.animate({
         bottom: target + "px"
       }, {
