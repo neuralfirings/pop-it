@@ -39,39 +39,39 @@ getUrlParam = function(name) {
 };
 
 if (getUrlParam("speed") !== "") {
-  SPEED = getUrlParam("speed");
+  SPEED = parseFloat(getUrlParam("speed"));
 }
 
 if (getUrlParam("angle") !== "") {
-  MAX_ANGLE = getUrlParam("angle");
+  MAX_ANGLE = parseFloat(getUrlParam("angle"));
 }
 
 if (getUrlParam("ctr") !== "") {
-  ROW_COUNTER_CEILING = getUrlParam("ctr");
+  ROW_COUNTER_CEILING = parseFloat(getUrlParam("ctr"));
 }
 
 if (getUrlParam("ctrr") !== "") {
-  ROW_COUNTER_CEILING_RAND = getUrlParam("ctrr");
+  ROW_COUNTER_CEILING_RAND = parseFloat(getUrlParam("ctrr"));
 }
 
 if (getUrlParam("timer") !== "") {
-  ROW_COUNTER_INTERVAL = getUrlParam("timer");
+  ROW_COUNTER_INTERVAL = parseFloat(getUrlParam("timer"));
 }
 
 if (getUrlParam("max") !== "") {
-  MAX_ROW_NUM = getUrlParam("max");
+  MAX_ROW_NUM = parseFloat(getUrlParam("max"));
 }
 
 if (getUrlParam("db") !== "") {
-  DROP_MULTIPLER = getUrlParam("db");
+  DROP_MULTIPLER = parseFloat(getUrlParam("db"));
 }
 
 if (getUrlParam("dbt") !== "") {
-  DROP_TIME_MULTIPLER = getUrlParam("dbt");
+  DROP_TIME_MULTIPLER = parseFloat(getUrlParam("dbt"));
 }
 
 if (getUrlParam("rows") !== "") {
-  DEFAULT_ROWS = getUrlParam("rows");
+  DEFAULT_ROWS = parseFloat(getUrlParam("rows"));
 }
 
 shooting = false;
