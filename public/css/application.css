@@ -13,6 +13,15 @@
     background-color: #FAFAFA;
     border-color: #EEE; }
 
+#timer-container .progress {
+  padding: 5px;
+  border-radius: 5px;
+  border: solid 1px #DDD; }
+  #timer-container .progress .progress-bar {
+    box-shadow: 0 0 0 0;
+    background-color: #DDD;
+    color: transparent; }
+
 #popper-container {
   width: 600px;
   height: 600px;

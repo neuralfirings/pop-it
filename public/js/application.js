@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_COUNTER_CEILING, ROW_COUNTER_INTERVAL, SPEED, addRow, addRowCounter, addRows, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
+var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_COUNTER_CEILING, ROW_COUNTER_INTERVAL, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
 
 BUBBLE_BORDER = 5;
 
@@ -18,7 +18,9 @@ ROW_COUNTER_INTERVAL = 15;
 
 MAX_ROW_NUM = 10;
 
-DROP_MULTIPLER = 2;
+DROP_MULTIPLER = 1.2;
+
+DROP_TIME_MULTIPLER = 0.5;
 
 DEFAULT_ROWS = 3;
 
@@ -40,9 +42,11 @@ bubbleMatrixOne = [];
 
 bubbleMatrixTwo = [];
 
+addRowCounterSecs = ROW_COUNTER_INTERVAL;
+
 $(document).ready(function() {
-  var addRowCounterSecs, currColor, currColorClass, gameoverlay, h, i, j, margin, noticeoverlay, pauseoverlay, rand, shooter, shooterbase, shootercontrol, shooteroverlay, startoverlay, w, winoverlay, x, xNum, y, yNum;
-  console.log("Pop It!");
+  var currColor, currColorClass, gameoverlay, h, i, j, margin, noticeoverlay, pauseoverlay, rand, refresh, shooter, shooterbase, shootercontrol, shooteroverlay, startoverlay, w, winoverlay, x, xNum, y, yNum;
+  $("#addrowmeter").css("width", "100%");
   $("#timer").text(ROW_COUNTER_INTERVAL);
   shooter = $("<div class='popper-shooter'></div>");
   shootercontrol = $("<div id='shooter-control'></div>");
@@ -194,16 +198,18 @@ $(document).ready(function() {
   }
   addRows(DEFAULT_ROWS);
   addRowCounterSecs = ROW_COUNTER_INTERVAL;
+  refresh = .1;
   window.addrow = setInterval((function() {
     if (isPaused === false) {
-      $("#timer").text(addRowCounterSecs);
-      addRowCounterSecs--;
+      $("#timer").text(Math.ceil(addRowCounterSecs - 1 * refresh));
+      $("#addrowmeter").css("width", (addRowCounterSecs - 1 * refresh) / ROW_COUNTER_INTERVAL * 100 + "%");
+      addRowCounterSecs = addRowCounterSecs - 1 * refresh;
       if (addRowCounterSecs < 1) {
         addRow();
         return addRowCounterSecs = ROW_COUNTER_INTERVAL;
       }
     }
-  }), 1000);
+  }), 1000 * refresh);
   $("#pause-button").click(function() {
     if (isPaused === false) {
       pause();
@@ -221,8 +227,8 @@ $(document).ready(function() {
 });
 
 noticeFlash = function(str) {
-  return $("#notice-overlay").text(str).show().fadeOut({
-    duration: 1200
+  return $("#notice-overlay").html(str).show().fadeOut({
+    duration: 1500
   });
 };
 
@@ -466,8 +472,6 @@ checkCluster = function(loc, checkColor, n, checkedBefore) {
       }
     }
     return arr;
-  } else {
-    return console.log("too many recursions");
   }
 };
 
@@ -545,7 +549,7 @@ lookAround = function(loc) {
 };
 
 drop = function(locs, type, callback) {
-  var delta, l, ldiv, multipler, target, topRow, topRowDFB, toploc, _i, _len;
+  var delta, i, l, ldiv, multipler, target, topRow, topRowDFB, toploc, _i, _len;
   if (locs === void 0) {
     return;
   } else {
@@ -565,6 +569,7 @@ drop = function(locs, type, callback) {
       topRow = toploc.row;
       topRowDFB = bubbleMatrix[topRow][0].y - $("#popper-container").height();
     }
+    i = 0;
     for (_i = 0, _len = locs.length; _i < _len; _i++) {
       l = locs[_i];
       bubbleMatrix[l.row][l.num].color = void 0;
@@ -575,28 +580,43 @@ drop = function(locs, type, callback) {
         multipler = Math.pow(l.row - topRow + 1, 1.1);
         delta = -50 * multipler;
         target = target + delta;
-        ldiv.animate({
-          bottom: target + "px"
-        }, {
-          duration: 600,
-          complete: function() {
-            if (callback !== void 0) {
-              return callback();
-            }
-          }
-        });
-      } else {
-        ldiv.fadeOut({
-          duration: 150,
-          complete: function() {
-            if (callback !== void 0) {
-              return setTimeout((function() {
+        if (i === locs.length - 1) {
+          ldiv.animate({
+            bottom: target + "px"
+          }, {
+            duration: 600,
+            complete: function() {
+              if (callback !== void 0) {
                 return callback();
-              }), 10);
+              }
             }
-          }
-        });
+          });
+        } else {
+          ldiv.animate({
+            bottom: target + "px"
+          }, {
+            duration: 600
+          });
+        }
+      } else {
+        if (i === locs.length - 1) {
+          ldiv.fadeOut({
+            duration: 150,
+            complete: function(i) {
+              if (callback !== void 0) {
+                return setTimeout((function() {
+                  return callback();
+                }), 10);
+              }
+            }
+          });
+        } else {
+          ldiv.fadeOut({
+            duration: 150
+          });
+        }
       }
+      i++;
     }
   }
 };
@@ -687,8 +707,9 @@ jQuery.fn.putInMatrix = function(loc, pop) {
     sameColorLocs = checkCluster(loc, true);
     if (sameColorLocs.length >= 3) {
       oldScore = parseInt($("#score").text());
+      $("#score").text(oldScore + sameColorLocs.length);
       drop(sameColorLocs, "fade", function() {
-        var b, bonuspts, furthest, i, l, loc_i, looseguys, n, r, topsChecked, wallcluster, _i, _len, _ref;
+        var b, bonuspts, bonussec, furthest, i, l, loc_i, looseguys, n, newsec, r, topsChecked, wallcluster, _i, _len, _ref;
         topsChecked = [];
         i = 0;
         _ref = bubbleMatrix[0];
@@ -734,24 +755,33 @@ jQuery.fn.putInMatrix = function(loc, pop) {
           }
           r++;
         }
+        if (looseguys.length > 1) {
+          bonussec = Math.round(looseguys.length * DROP_TIME_MULTIPLER);
+          newsec = addRowCounterSecs + bonussec;
+          newsec = Math.min(newsec, ROW_COUNTER_INTERVAL);
+          addRowCounterSecs = newsec;
+          $("#addrowmeter").css("width", addRowCounterSecs / ROW_COUNTER_INTERVAL * 100 + "%");
+        }
+        if (looseguys.length > 0) {
+          bonuspts = Math.ceil(Math.pow(looseguys.length, DROP_MULTIPLER));
+          if (bonuspts > 1) {
+            noticeFlash("<small>Dropped " + looseguys.length + "!</small><br />" + bonuspts + " bonus points!!");
+          } else if (bonuspts === 1) {
+            noticeFlash("<small>Dropped 1</small><br />" + bonuspts + " bonus point!");
+          }
+        } else {
+          bonuspts = 0;
+        }
+        oldScore = parseInt($("#score").text());
+        $("#score").text(oldScore + looseguys.length + bonuspts);
         drop(looseguys, "drop", function() {
           if (checkIfWon() === true) {
             return win();
           }
         });
         if (checkIfWon() === true) {
-          win();
+          return win();
         }
-        if (looseguys.length > 0) {
-          bonuspts = looseguys.length * DROP_MULTIPLER - 1;
-          if (bonuspts > 1) {
-            noticeFlash("Bonus " + looseguys.length * (DROP_MULTIPLER - 1) + " points!!");
-          } else if (bonuspts === 1) {
-            noticeFlash("Bonus " + looseguys.length * (DROP_MULTIPLER - 1) + " point!");
-          }
-        }
-        deltaScore += Math.ceil(looseguys.length * DROP_MULTIPLER);
-        return $("#score").text(oldScore + deltaScore);
       });
     } else {
       if (loc.row > MAX_ROW_NUM) {
@@ -761,11 +791,6 @@ jQuery.fn.putInMatrix = function(loc, pop) {
         div.putInMatrix(prevMatrixLoc);
       }
     }
-    if (sameColorLocs.length >= 3) {
-      deltaScore += sameColorLocs.length;
-    }
-    oldScore = parseInt($("#score").text());
-    $("#score").text(oldScore + deltaScore);
   }
   shooting = false;
 };

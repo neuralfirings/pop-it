@@ -9,7 +9,8 @@ BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"] # should corrlate with CSS c
 ROW_COUNTER_CEILING = 10000 # when counter reaches this it adds a new row, so lower the number is harder
 ROW_COUNTER_INTERVAL = 15 # seconds before new layer
 MAX_ROW_NUM = 10 # after this it's game over sadface
-DROP_MULTIPLER = 2 # multiple of points you get when you drop bubbles
+DROP_MULTIPLER = 1.2 # multiple of points you get when you drop bubbles
+DROP_TIME_MULTIPLER = 0.5 # dropped * this = extra seconds you get
 DEFAULT_ROWS = 3
 
 # starter values
@@ -22,9 +23,10 @@ isWon = false
 bubbleMatrix = [] # the matrix currently in use
 bubbleMatrixOne = [] # because of the hexagonal thing
 bubbleMatrixTwo = [] # because of the hexagonal thing
+addRowCounterSecs = ROW_COUNTER_INTERVAL
 
 $(document).ready ->
-  console.log("Pop It!")
+  $("#addrowmeter").css("width", "100%")
   $("#timer").text(ROW_COUNTER_INTERVAL)
 
   shooter = $("<div class='popper-shooter'></div>")
@@ -185,14 +187,16 @@ $(document).ready ->
   # Add Rows Mechanismmmmmmmmmm
   addRows(DEFAULT_ROWS)
   addRowCounterSecs = ROW_COUNTER_INTERVAL
+  refresh = .1 # seconds
   window.addrow = setInterval (() ->
     if isPaused == false 
-      $("#timer").text(addRowCounterSecs)
-      addRowCounterSecs--
+      $("#timer").text(Math.ceil(addRowCounterSecs - 1*refresh))
+      $("#addrowmeter").css("width", (addRowCounterSecs-1*refresh)/ROW_COUNTER_INTERVAL*100 + "%")
+      addRowCounterSecs = addRowCounterSecs - 1*refresh
       if addRowCounterSecs < 1
         addRow()
         addRowCounterSecs = ROW_COUNTER_INTERVAL
-  ), 1000
+  ), 1000 * refresh
   # addRow(["red", "red", "red", "red", "red", "red", "red", "red", "red", "red", "red"])
   
   # CLICKS
@@ -212,7 +216,7 @@ $(document).ready ->
 # return # end of document ready
 
 noticeFlash = (str) ->
-  $("#notice-overlay").text(str).show().fadeOut({duration: 1200})
+  $("#notice-overlay").html(str).show().fadeOut({duration: 1500})
 
 
 #####################################################################
@@ -408,7 +412,7 @@ checkCluster = (loc, checkColor, n, checkedBefore) ->
 
   # TO DO : convert this to use underscore.js
   checkedBefore.push stringifyLoc(loc)
-  arr = [loc] # [stringifyLoc(loc)] # turning this on returns readable stuff in console.log
+  arr = [loc] 
   if n < 1000 # in case of infinite loop
     enviro = lookAround(loc)
     for l in enviro
@@ -420,8 +424,6 @@ checkCluster = (loc, checkColor, n, checkedBefore) ->
         else
           arr = arr.concat checkCluster(l, checkColor,  n, checkedBefore)
     return arr
-  else
-    console.log "too many recursions"
 
 isMatrixLocEmpty = (loc) ->
   if loc.row < 0 or loc.row > bubbleMatrix.length - 1 or loc.num < 0 or loc.num > bubbleMatrix[0].length - 1
@@ -478,7 +480,7 @@ drop = (locs, type, callback) ->
   else
     if locs instanceof Array
       if locs.length == 0
-        return
+        return # yeah, THIS should not happen, not sure what the deal is here
       else
         locs = locs
     else
@@ -492,7 +494,7 @@ drop = (locs, type, callback) ->
       topRowDFB = bubbleMatrix[topRow][0].y - $("#popper-container").height()
       # DFB = distance from top, where it should end up when dropped
 
-
+    i = 0
     for l in locs
       # clear matrix
       bubbleMatrix[l.row][l.num].color = undefined
@@ -506,20 +508,31 @@ drop = (locs, type, callback) ->
         delta = -50*multipler
         target = target+delta 
 
-        ldiv.animate(
-          { bottom: target + "px"}, 
-          { duration: 600, complete: () ->
-            if callback != undefined
-              callback()
-          }
-        );
+        if i == locs.length-1
+          ldiv.animate(
+            { bottom: target + "px"}, 
+            { duration: 600, complete: () ->
+              if callback != undefined
+                callback()
+            }
+          );
+        else
+          ldiv.animate(
+            { bottom: target + "px"}, 
+            { duration: 600}
+          );
+
       else
-        ldiv.fadeOut({duration: 150, complete: () ->
-          if callback != undefined
-            setTimeout (() ->
-              callback()
-            ), 10
-        });
+        if i == locs.length-1
+          ldiv.fadeOut({duration: 150, complete: (i) ->
+            if callback != undefined
+              setTimeout (() ->
+                callback()
+              ), 10
+          });
+        else 
+          ldiv.fadeOut({duration: 150});
+      i++
   return
 
 getDivFromLoc = (loc) ->
@@ -596,7 +609,10 @@ jQuery.fn.putInMatrix = (loc, pop) ->
     deltaScore = 0
     sameColorLocs = checkCluster(loc, true)
     if sameColorLocs.length >= 3
+      # calc same color score
       oldScore = parseInt($("#score").text())
+      $("#score").text(oldScore + sameColorLocs.length)
+
       drop(sameColorLocs, "fade", () ->
         # code to drop loose bubbles
         topsChecked = []
@@ -632,25 +648,33 @@ jQuery.fn.putInMatrix = (loc, pop) ->
                 looseguys.push l #bubbleMatrix[r][n].div
             n++
           r++
+
+        # bonus time for dropping
+        if looseguys.length >1
+          bonussec = Math.round(looseguys.length * DROP_TIME_MULTIPLER)
+          newsec = addRowCounterSecs + bonussec
+          newsec = Math.min(newsec, ROW_COUNTER_INTERVAL)
+          addRowCounterSecs = newsec
+          $("#addrowmeter").css("width", addRowCounterSecs/ROW_COUNTER_INTERVAL*100 + "%")
+
+        # calc loose guys score
+        if looseguys.length > 0  
+          bonuspts = Math.ceil(Math.pow(looseguys.length, DROP_MULTIPLER))#-looseguys.length #looseguys.length * DROP_MULTIPLER-1
+          if bonuspts > 1
+            noticeFlash("<small>Dropped " + looseguys.length + "!</small><br />" + bonuspts + " bonus points!!")
+          else if bonuspts == 1
+            noticeFlash("<small>Dropped 1</small><br />" + bonuspts + " bonus point!")
+        else
+          bonuspts = 0
+        oldScore = parseInt($("#score").text())
+        $("#score").text(oldScore + looseguys.length + bonuspts) # do something fancier here
         drop(looseguys, "drop", () ->
-          # console.log("drop bonus", looseguys.length)
           if checkIfWon() == true
             win()
         )
         
         if checkIfWon() == true
           win()
-
-        if looseguys.length > 0  
-          bonuspts = looseguys.length * DROP_MULTIPLER-1
-          if bonuspts > 1
-            noticeFlash("Bonus " + looseguys.length * (DROP_MULTIPLER-1) + " points!!")
-          else if bonuspts == 1
-            noticeFlash("Bonus " + looseguys.length * (DROP_MULTIPLER-1) + " point!")
-          
-        # oldScore = parseInt($("#score").text())
-        deltaScore += Math.ceil(looseguys.length * DROP_MULTIPLER) 
-        $("#score").text(oldScore + deltaScore) # do something fancier here
       )
     else
       if loc.row > MAX_ROW_NUM
@@ -659,10 +683,10 @@ jQuery.fn.putInMatrix = (loc, pop) ->
         div.css("background-color", "#DDD").css("border-color", "#BBB")
         div.putInMatrix prevMatrixLoc
 
-    if sameColorLocs.length >= 3
-      deltaScore += sameColorLocs.length
-    oldScore = parseInt($("#score").text())
-    $("#score").text(oldScore + deltaScore) # do something fancier here
+    # if sameColorLocs.length >= 3
+    #   deltaScore += sameColorLocs.length
+    # oldScore = parseInt($("#score").text())
+    # $("#score").text(oldScore + deltaScore) # do something fancier here
   shooting = false 
   return
 
