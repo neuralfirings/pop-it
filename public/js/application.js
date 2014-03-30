@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_COUNTER_CEILING, ROW_COUNTER_CEILING_RAND, ROW_COUNTER_INTERVAL, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
+var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_COUNTER_CEILING, ROW_COUNTER_CEILING_ACCEL, ROW_COUNTER_CEILING_RAND, ROW_COUNTER_INTERVAL, ROW_COUNTER_INTERVAL_ACCEL, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, numRowAdded, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
 
 BUBBLE_BORDER = 5;
 
@@ -14,15 +14,19 @@ BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"];
 
 ROW_COUNTER_CEILING = 0;
 
-ROW_COUNTER_CEILING_RAND = 2;
+ROW_COUNTER_CEILING_RAND = 1;
+
+ROW_COUNTER_CEILING_ACCEL = 0.8;
 
 ROW_COUNTER_INTERVAL = 20;
+
+ROW_COUNTER_INTERVAL_ACCEL = .9;
 
 MAX_ROW_NUM = 10;
 
 DROP_MULTIPLER = 1.2;
 
-DROP_TIME_MULTIPLER = 0.5;
+DROP_TIME_MULTIPLER = 1;
 
 DEFAULT_ROWS = 3;
 
@@ -54,8 +58,16 @@ if (getUrlParam("ctrr") !== "") {
   ROW_COUNTER_CEILING_RAND = parseFloat(getUrlParam("ctrr"));
 }
 
+if (getUrlParam("accelc") !== "") {
+  ROW_COUNTER_CEILING_ACCEL = parseFloat(getUrlParam("accelc"));
+}
+
 if (getUrlParam("timer") !== "") {
   ROW_COUNTER_INTERVAL = parseFloat(getUrlParam("timer"));
+}
+
+if (getUrlParam("accelt") !== "") {
+  ROW_COUNTER_INTERVAL_ACCEL = parseFloat(getUrlParam("accelt"));
 }
 
 if (getUrlParam("max") !== "") {
@@ -94,18 +106,35 @@ addRowCounter = 0;
 
 addRowCounterSecs = 1;
 
+numRowAdded = 0;
+
 $(document).ready(function() {
-  var currColor, currColorClass, gameoverlay, h, i, j, margin, noticeoverlay, pauseoverlay, rand, refresh, rowcounterinfo, rowintervalinfo, shooter, shooterbase, shootercontrol, shooteroverlay, startoverlay, w, winoverlay, x, xNum, y, yNum;
+  var currColor, currColorClass, fornow, gameoverlay, h, i, j, margin, minCtr, noticeoverlay, pauseoverlay, rand, refresh, rowcounterinfo, rowintervalinfo, shooter, shooterbase, shootercontrol, shooteroverlay, startoverlay, w, winoverlay, x, xNum, y, yNum;
   shooter = $("<div class='popper-shooter'></div>");
   shootercontrol = $("<div id='shooter-control'></div>");
   shooterbase = $("<div id='shooter-base'></div>");
   if (ROW_COUNTER_CEILING !== 0) {
-    rowcounterinfo = "New row every " + ROW_COUNTER_CEILING / ROW_COUNTER_CEILING_RAND + " to " + ROW_COUNTER_CEILING + " turns.<br><br>";
+    if (ROW_COUNTER_CEILING_ACCEL !== 0) {
+      fornow = "<br>...for now";
+    } else {
+      fornow = "";
+    }
+    if (ROW_COUNTER_CEILING_RAND !== 1) {
+      minCtr = Math.ceil(ROW_COUNTER_CEILING / ROW_COUNTER_CEILING_RAND) + " to ";
+    } else {
+      minCtr = "";
+    }
+    rowcounterinfo = "New row every " + minCtr + ROW_COUNTER_CEILING + " turns" + fornow + ".<br><br>";
   } else {
     rowcounterinfo = "";
   }
   if (ROW_COUNTER_INTERVAL !== 0) {
-    rowintervalinfo = "New row every " + ROW_COUNTER_INTERVAL + " seconds.<br><br>";
+    if (ROW_COUNTER_INTERVAL_ACCEL < 1) {
+      fornow = "<br>...for now";
+    } else {
+      fornow = "";
+    }
+    rowintervalinfo = "New row every " + ROW_COUNTER_INTERVAL + " secs" + fornow + ".<br><br>";
   } else {
     rowintervalinfo = "";
   }
@@ -163,8 +192,9 @@ $(document).ready(function() {
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
       if (ROW_COUNTER_CEILING !== 0) {
         addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND) + 1;
-        if (addRowCounter > ROW_COUNTER_CEILING) {
+        if (addRowCounter > ROW_COUNTER_CEILING - ROW_COUNTER_CEILING_ACCEL * numRowAdded) {
           addRow();
+          numRowAdded++;
           addRowCounter = 0;
         }
       }
@@ -188,8 +218,9 @@ $(document).ready(function() {
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
       if (ROW_COUNTER_CEILING !== 0) {
         addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND) + 1;
-        if (addRowCounter > ROW_COUNTER_CEILING) {
+        if (addRowCounter > ROW_COUNTER_CEILING - ROW_COUNTER_CEILING_ACCEL * numRowAdded) {
           addRow();
+          numRowAdded++;
           addRowCounter = 0;
         }
       }
@@ -274,7 +305,8 @@ $(document).ready(function() {
         addRowCounterSecs = addRowCounterSecs - 1 * refresh;
         if (addRowCounterSecs < 1) {
           addRow();
-          return addRowCounterSecs = ROW_COUNTER_INTERVAL;
+          numRowAdded++;
+          return addRowCounterSecs = ROW_COUNTER_INTERVAL * Math.pow(ROW_COUNTER_INTERVAL_ACCEL, numRowAdded);
         }
       }
     }), 1000 * refresh);
