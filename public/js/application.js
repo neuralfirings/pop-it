@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_COUNTER_CEILING, ROW_COUNTER_CEILING_ACCEL, ROW_COUNTER_CEILING_RAND, ROW_COUNTER_INTERVAL, ROW_COUNTER_INTERVAL_ACCEL, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, numRowAdded, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
+var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, numRowAdded, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
 
 BUBBLE_BORDER = 5;
 
@@ -6,29 +6,33 @@ BUBBLE_RADIUS = 25;
 
 CONTAINER_BORDER = 5;
 
+BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"];
+
+DEFAULT_ROWS = 3;
+
+MAX_ROW_NUM = 10;
+
 SPEED = 20;
 
 MAX_ANGLE = 75;
 
-BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"];
+ROW_TURNS_CEILING = 4;
 
-ROW_COUNTER_CEILING = 0;
+ROW_TURNS_FLOOR = 2;
 
-ROW_COUNTER_CEILING_RAND = 1;
+ROW_TURNS_RAND = 1;
 
-ROW_COUNTER_CEILING_ACCEL = 0.8;
+ROW_TURNS_MULTIPLIER = 0.8;
 
-ROW_COUNTER_INTERVAL = 20;
+ADDROW_TIMER_CEILING = 0;
 
-ROW_COUNTER_INTERVAL_ACCEL = .9;
+ADDROW_TIMER_MIN = 5;
 
-MAX_ROW_NUM = 10;
+ADDROW_TIMER_MULTIPLIER = .9;
 
 DROP_MULTIPLER = 1.2;
 
 DROP_TIME_MULTIPLER = 1;
-
-DEFAULT_ROWS = 3;
 
 getUrlParam = function(name) {
   var regex, results;
@@ -42,6 +46,14 @@ getUrlParam = function(name) {
   }
 };
 
+if (getUrlParam("maxrows") !== "") {
+  MAX_ROW_NUM = parseFloat(getUrlParam("maxrows"));
+}
+
+if (getUrlParam("startrows") !== "") {
+  DEFAULT_ROWS = parseFloat(getUrlParam("startrows"));
+}
+
 if (getUrlParam("speed") !== "") {
   SPEED = parseFloat(getUrlParam("speed"));
 }
@@ -50,40 +62,40 @@ if (getUrlParam("angle") !== "") {
   MAX_ANGLE = parseFloat(getUrlParam("angle"));
 }
 
-if (getUrlParam("ctr") !== "") {
-  ROW_COUNTER_CEILING = parseFloat(getUrlParam("ctr"));
+if (getUrlParam("turnmax") !== "") {
+  ROW_TURNS_CEILING = parseFloat(getUrlParam("turnmax"));
 }
 
-if (getUrlParam("ctrr") !== "") {
-  ROW_COUNTER_CEILING_RAND = parseFloat(getUrlParam("ctrr"));
+if (getUrlParam("turnmin") !== "") {
+  ROW_TURNS_FLOOR = parseFloat(getUrlParam("turnmin"));
 }
 
-if (getUrlParam("accelc") !== "") {
-  ROW_COUNTER_CEILING_ACCEL = parseFloat(getUrlParam("accelc"));
+if (getUrlParam("turnrand") !== "") {
+  ROW_TURNS_RAND = parseFloat(getUrlParam("turnrand"));
 }
 
-if (getUrlParam("timer") !== "") {
-  ROW_COUNTER_INTERVAL = parseFloat(getUrlParam("timer"));
+if (getUrlParam("turnaccel") !== "") {
+  ROW_TURNS_MULTIPLIER = parseFloat(getUrlParam("turnaccel"));
 }
 
-if (getUrlParam("accelt") !== "") {
-  ROW_COUNTER_INTERVAL_ACCEL = parseFloat(getUrlParam("accelt"));
+if (getUrlParam("timermax") !== "") {
+  ADDROW_TIMER_CEILING = parseFloat(getUrlParam("timermax"));
 }
 
-if (getUrlParam("max") !== "") {
-  MAX_ROW_NUM = parseFloat(getUrlParam("max"));
+if (getUrlParam("timermin") !== "") {
+  ADDROW_TIMER_MIN = parseFloat(getUrlParam("timermin"));
 }
 
-if (getUrlParam("db") !== "") {
-  DROP_MULTIPLER = parseFloat(getUrlParam("db"));
+if (getUrlParam("timeraccel") !== "") {
+  ADDROW_TIMER_MULTIPLIER = parseFloat(getUrlParam("timeraccel"));
 }
 
-if (getUrlParam("dbt") !== "") {
-  DROP_TIME_MULTIPLER = parseFloat(getUrlParam("dbt"));
+if (getUrlParam("droppoints") !== "") {
+  DROP_MULTIPLER = parseFloat(getUrlParam("droppoints"));
 }
 
-if (getUrlParam("rows") !== "") {
-  DEFAULT_ROWS = parseFloat(getUrlParam("rows"));
+if (getUrlParam("droptime") !== "") {
+  DROP_TIME_MULTIPLER = parseFloat(getUrlParam("droptime"));
 }
 
 shooting = false;
@@ -113,28 +125,28 @@ $(document).ready(function() {
   shooter = $("<div class='popper-shooter'></div>");
   shootercontrol = $("<div id='shooter-control'></div>");
   shooterbase = $("<div id='shooter-base'></div>");
-  if (ROW_COUNTER_CEILING !== 0) {
-    if (ROW_COUNTER_CEILING_ACCEL !== 0) {
+  if (ROW_TURNS_CEILING !== 0) {
+    if (ROW_TURNS_MULTIPLIER !== 0) {
       fornow = "<br>...for now";
     } else {
       fornow = "";
     }
-    if (ROW_COUNTER_CEILING_RAND !== 1) {
-      minCtr = Math.ceil(ROW_COUNTER_CEILING / ROW_COUNTER_CEILING_RAND) + " to ";
+    if (ROW_TURNS_RAND !== 1) {
+      minCtr = Math.ceil(ROW_TURNS_CEILING / ROW_TURNS_RAND) + " to ";
     } else {
       minCtr = "";
     }
-    rowcounterinfo = "New row every " + minCtr + ROW_COUNTER_CEILING + " turns" + fornow + ".<br><br>";
+    rowcounterinfo = "New row every " + minCtr + ROW_TURNS_CEILING + " turns" + fornow + ".<br><br>";
   } else {
     rowcounterinfo = "";
   }
-  if (ROW_COUNTER_INTERVAL !== 0) {
-    if (ROW_COUNTER_INTERVAL_ACCEL < 1) {
+  if (ADDROW_TIMER_CEILING !== 0) {
+    if (ADDROW_TIMER_MULTIPLIER < 1) {
       fornow = "<br>...for now";
     } else {
       fornow = "";
     }
-    rowintervalinfo = "New row every " + ROW_COUNTER_INTERVAL + " secs" + fornow + ".<br><br>";
+    rowintervalinfo = "New row every " + ADDROW_TIMER_CEILING + " secs" + fornow + ".<br><br>";
   } else {
     rowintervalinfo = "";
   }
@@ -190,9 +202,9 @@ $(document).ready(function() {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
-      if (ROW_COUNTER_CEILING !== 0) {
-        addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND) + 1;
-        if (addRowCounter > ROW_COUNTER_CEILING - ROW_COUNTER_CEILING_ACCEL * numRowAdded) {
+      if (ROW_TURNS_CEILING !== 0) {
+        addRowCounter += Math.floor(Math.random() * ROW_TURNS_RAND) + 1;
+        if (addRowCounter >= Math.max(ROW_TURNS_FLOOR, ROW_TURNS_CEILING - ROW_TURNS_MULTIPLIER * numRowAdded)) {
           addRow();
           numRowAdded++;
           addRowCounter = 0;
@@ -216,9 +228,9 @@ $(document).ready(function() {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
-      if (ROW_COUNTER_CEILING !== 0) {
-        addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND) + 1;
-        if (addRowCounter > ROW_COUNTER_CEILING - ROW_COUNTER_CEILING_ACCEL * numRowAdded) {
+      if (ROW_TURNS_CEILING !== 0) {
+        addRowCounter += Math.floor(Math.random() * ROW_TURNS_RAND) + 1;
+        if (addRowCounter > ROW_TURNS_CEILING - ROW_TURNS_MULTIPLIER * numRowAdded) {
           addRow();
           numRowAdded++;
           addRowCounter = 0;
@@ -289,23 +301,24 @@ $(document).ready(function() {
     }
     j++;
   }
-  if (ROW_COUNTER_INTERVAL === 0) {
+  if (ADDROW_TIMER_CEILING === 0) {
     $("#timer-container").hide();
     addRowCounterSecs = 1;
   } else {
     $("#timer-container").show();
     $("#addrowmeter").css("width", "100%");
-    $("#timer").text(ROW_COUNTER_INTERVAL).show();
-    addRowCounterSecs = ROW_COUNTER_INTERVAL;
+    $("#timer").text(ADDROW_TIMER_CEILING).show();
+    addRowCounterSecs = ADDROW_TIMER_CEILING;
     refresh = .1;
     window.addrow = setInterval((function() {
       if (isPaused === false) {
-        $("#timer").text(Math.max(0, Math.floor(addRowCounterSecs)));
-        $("#addrowmeter").css("width", (addRowCounterSecs - 1 * refresh) / ROW_COUNTER_INTERVAL * 100 + "%");
+        $("#timer").text(Math.max(0, Math.ceil(addRowCounterSecs)));
+        $("#addrowmeter").css("width", (addRowCounterSecs - 1 * refresh) / ADDROW_TIMER_CEILING * 100 + "%");
         if (addRowCounterSecs < 0) {
           addRow();
           numRowAdded++;
-          addRowCounterSecs = Math.max(2, ROW_COUNTER_INTERVAL * Math.pow(ROW_COUNTER_INTERVAL_ACCEL, numRowAdded));
+          addRowCounterSecs = Math.max(ADDROW_TIMER_MIN, ADDROW_TIMER_CEILING * Math.pow(ADDROW_TIMER_MULTIPLIER, numRowAdded));
+          console.log(addRowCounterSecs);
         }
         return addRowCounterSecs = addRowCounterSecs - 1 * refresh;
       }
@@ -879,9 +892,9 @@ jQuery.fn.putInMatrix = function(loc, pop) {
         if (looseguys.length > 1) {
           bonussec = Math.round(looseguys.length * DROP_TIME_MULTIPLER);
           newsec = addRowCounterSecs + bonussec;
-          newsec = Math.min(newsec, ROW_COUNTER_INTERVAL);
+          newsec = Math.min(newsec, ADDROW_TIMER_CEILING);
           addRowCounterSecs = newsec;
-          $("#addrowmeter").css("width", addRowCounterSecs / ROW_COUNTER_INTERVAL * 100 + "%");
+          $("#addrowmeter").css("width", addRowCounterSecs / ADDROW_TIMER_CEILING * 100 + "%");
         }
         if (looseguys.length > 0) {
           bonuspts = Math.ceil(Math.pow(looseguys.length, DROP_MULTIPLER));
