@@ -213,7 +213,7 @@ $(document).ready(function() {
   $("#pause-button").click(function() {
     if (isPaused === false) {
       pause();
-      return $(this).text("Unpause");
+      return $(this).text("Go");
     } else {
       unpause();
       return $(this).text("Pause");
