@@ -3,18 +3,24 @@
 BUBBLE_BORDER = 5 # constant, I think
 BUBBLE_RADIUS = 25 # change to number of bubbles
 CONTAINER_BORDER = 5 # constant
+
+BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"] # should corrlate with CSS classes
+DEFAULT_ROWS = 3 # how many rows you start with
+MAX_ROW_NUM = 10 # after this it's game over sadface
+
 SPEED = 20 # speed of the shooter
 MAX_ANGLE = 75 # max angle of the shooter
-BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"] # should corrlate with CSS classes
-ROW_COUNTER_CEILING = 0 # when counter reaches this it adds a new row, so lower the number is harder; 0 for infinite
-ROW_COUNTER_CEILING_RAND = 1 # as counter increments, it can increment 1-this number at random 
-ROW_COUNTER_CEILING_ACCEL = 0.8 # as you get more turns, row ceiling gets lower (not exponentially)
-ROW_COUNTER_INTERVAL = 20  # seconds before new layer, 0 for infinite
-ROW_COUNTER_INTERVAL_ACCEL = .9  # as you get more turns your seconds drop (exponentially)
-MAX_ROW_NUM = 10 # after this it's game over sadface
+
+ROW_TURNS_CEILING = 4 # when counter reaches this it adds a new row, so lower the number is harder; 0 for infinite
+ROW_TURNS_FLOOR = 2 # min number of turns before ceiling (random factory included)
+ROW_TURNS_RAND = 1 # as counter increments, it can increment 1-this number at random 
+ROW_TURNS_MULTIPLIER = 0.8 # as you get more turns, row ceiling gets lower (not exponentially)
+ADDROW_TIMER_CEILING = 0  # seconds before new layer, 0 for infinite
+ADDROW_TIMER_MIN = 5  # mininum seconds before new layer
+ADDROW_TIMER_MULTIPLIER = .9  # as you get more turns your seconds drop (exponentially)
+
 DROP_MULTIPLER = 1.2 # multiple of points you get when you drop bubbles
 DROP_TIME_MULTIPLER = 1 # dropped * this = extra seconds you get
-DEFAULT_ROWS = 3
 
 # URL Params.. for easy play testing
 getUrlParam = (name) ->
@@ -22,28 +28,35 @@ getUrlParam = (name) ->
   regex = new RegExp("[\\?&]" + name + "=([^&#]*)")
   results = regex.exec(location.search)
   (if not results? then "" else decodeURIComponent(results[1].replace(/\+/g, " ").replace(/\//g, '')))
+if getUrlParam("maxrows") != ""
+  MAX_ROW_NUM = parseFloat(getUrlParam("maxrows"))
+if getUrlParam("startrows") != ""
+  DEFAULT_ROWS = parseFloat(getUrlParam("startrows"))
+
 if getUrlParam("speed") != ""
   SPEED = parseFloat(getUrlParam("speed"))
 if getUrlParam("angle") != ""
   MAX_ANGLE = parseFloat(getUrlParam("angle"))
-if getUrlParam("ctr") != ""
-  ROW_COUNTER_CEILING = parseFloat(getUrlParam("ctr"))
-if getUrlParam("ctrr") != ""
-  ROW_COUNTER_CEILING_RAND = parseFloat(getUrlParam("ctrr"))
-if getUrlParam("accelc") != ""
-  ROW_COUNTER_CEILING_ACCEL = parseFloat(getUrlParam("accelc"))
-if getUrlParam("timer") != ""
-  ROW_COUNTER_INTERVAL = parseFloat(getUrlParam("timer"))
-if getUrlParam("accelt") != ""
-  ROW_COUNTER_INTERVAL_ACCEL = parseFloat(getUrlParam("accelt"))
-if getUrlParam("max") != ""
-  MAX_ROW_NUM = parseFloat(getUrlParam("max"))
-if getUrlParam("db") != ""
-  DROP_MULTIPLER = parseFloat(getUrlParam("db"))
-if getUrlParam("dbt") != ""
-  DROP_TIME_MULTIPLER = parseFloat(getUrlParam("dbt"))
-if getUrlParam("rows") != ""
-  DEFAULT_ROWS = parseFloat(getUrlParam("rows"))
+
+if getUrlParam("turnmax") != ""
+  ROW_TURNS_CEILING = parseFloat(getUrlParam("turnmax"))
+if getUrlParam("turnmin") != ""
+  ROW_TURNS_FLOOR = parseFloat(getUrlParam("turnmin"))
+if getUrlParam("turnrand") != ""
+  ROW_TURNS_RAND = parseFloat(getUrlParam("turnrand"))
+if getUrlParam("turnaccel") != ""
+  ROW_TURNS_MULTIPLIER = parseFloat(getUrlParam("turnaccel"))
+if getUrlParam("timermax") != ""
+  ADDROW_TIMER_CEILING = parseFloat(getUrlParam("timermax"))
+if getUrlParam("timermin") != ""
+  ADDROW_TIMER_MIN = parseFloat(getUrlParam("timermin"))
+if getUrlParam("timeraccel") != ""
+  ADDROW_TIMER_MULTIPLIER = parseFloat(getUrlParam("timeraccel"))
+
+if getUrlParam("droppoints") != ""
+  DROP_MULTIPLER = parseFloat(getUrlParam("droppoints"))
+if getUrlParam("droptime") != ""
+  DROP_TIME_MULTIPLER = parseFloat(getUrlParam("droptime"))
 
 
 # starter values
@@ -66,25 +79,25 @@ $(document).ready ->
   shooterbase = $("<div id='shooter-base'></div>")
 
   # overlays!
-  if ROW_COUNTER_CEILING != 0
-    if ROW_COUNTER_CEILING_ACCEL != 0
+  if ROW_TURNS_CEILING != 0
+    if ROW_TURNS_MULTIPLIER != 0
       fornow = "<br>...for now"
     else
       fornow = ""
-    if ROW_COUNTER_CEILING_RAND != 1
-      minCtr = Math.ceil(ROW_COUNTER_CEILING/ROW_COUNTER_CEILING_RAND) + " to " 
+    if ROW_TURNS_RAND != 1
+      minCtr = Math.ceil(ROW_TURNS_CEILING/ROW_TURNS_RAND) + " to " 
     else
       minCtr = ""
-    rowcounterinfo = "New row every " + minCtr + ROW_COUNTER_CEILING + " turns" + fornow + ".<br><br>"
+    rowcounterinfo = "New row every " + minCtr + ROW_TURNS_CEILING + " turns" + fornow + ".<br><br>"
   else
     rowcounterinfo = ""
 
-  if ROW_COUNTER_INTERVAL != 0
-    if ROW_COUNTER_INTERVAL_ACCEL < 1
+  if ADDROW_TIMER_CEILING != 0
+    if ADDROW_TIMER_MULTIPLIER < 1
       fornow = "<br>...for now"
     else 
       fornow = ""
-    rowintervalinfo = "New row every " + ROW_COUNTER_INTERVAL + " secs" + fornow + ".<br><br>"
+    rowintervalinfo = "New row every " + ADDROW_TIMER_CEILING + " secs" + fornow + ".<br><br>"
   else
     rowintervalinfo = ""
   startoverlay = $("<div id='startscreen' class='overlay'></div>")
@@ -149,9 +162,9 @@ $(document).ready ->
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
 
       # increment counter
-      if ROW_COUNTER_CEILING != 0
-        addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND)+1
-        if addRowCounter > ROW_COUNTER_CEILING - ROW_COUNTER_CEILING_ACCEL * numRowAdded
+      if ROW_TURNS_CEILING != 0
+        addRowCounter += Math.floor(Math.random() * ROW_TURNS_RAND)+1
+        if addRowCounter >= Math.max(ROW_TURNS_FLOOR, ROW_TURNS_CEILING - ROW_TURNS_MULTIPLIER * numRowAdded)
           addRow()
           numRowAdded++
           addRowCounter = 0
@@ -173,9 +186,9 @@ $(document).ready ->
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
-      if ROW_COUNTER_CEILING != 0
-        addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND)+1
-        if addRowCounter > ROW_COUNTER_CEILING - ROW_COUNTER_CEILING_ACCEL * numRowAdded
+      if ROW_TURNS_CEILING != 0
+        addRowCounter += Math.floor(Math.random() * ROW_TURNS_RAND)+1
+        if addRowCounter > ROW_TURNS_CEILING - ROW_TURNS_MULTIPLIER * numRowAdded
           addRow()
           numRowAdded++
           addRowCounter = 0 
@@ -244,29 +257,31 @@ $(document).ready ->
     j++
 
   # Add Rows Mechanismmmmmmmmmm Timers, Counters, oh my!
-  # if ROW_COUNTER_CEILING == 0
+  # if ROW_TURNS_CEILING == 0
   #   $("#rowcounter-container").hide()
   # else
   #   $("#rowcounter-container").show()
-  #   $("#rowcounter-info").text("New row every " + ROW_COUNTER_CEILING/ROW_COUNTER_CEILING_RAND + " to " + ROW_COUNTER_CEILING = " turns")
+  #   $("#rowcounter-info").text("New row every " + ROW_TURNS_CEILING/ROW_TURNS_RAND + " to " + ROW_TURNS_CEILING = " turns")
 
-  if ROW_COUNTER_INTERVAL == 0
+  if ADDROW_TIMER_CEILING == 0
     $("#timer-container").hide()
     addRowCounterSecs = 1
   else
     $("#timer-container").show()
     $("#addrowmeter").css("width", "100%")
-    $("#timer").text(ROW_COUNTER_INTERVAL).show()
-    addRowCounterSecs = ROW_COUNTER_INTERVAL
+    $("#timer").text(ADDROW_TIMER_CEILING).show()
+    addRowCounterSecs = ADDROW_TIMER_CEILING
     refresh = .1 # seconds
     window.addrow = setInterval (() ->
       if isPaused == false 
-        $("#timer").text(Math.max(0, Math.floor(addRowCounterSecs)))
-        $("#addrowmeter").css("width", (addRowCounterSecs-1*refresh)/ROW_COUNTER_INTERVAL*100 + "%")
+        $("#timer").text(Math.max(0, Math.ceil(addRowCounterSecs)))
+        $("#addrowmeter").css("width", (addRowCounterSecs-1*refresh)/ADDROW_TIMER_CEILING*100 + "%")
         if addRowCounterSecs < 0
           addRow()
           numRowAdded++
-          addRowCounterSecs = Math.max(2, ROW_COUNTER_INTERVAL * Math.pow(ROW_COUNTER_INTERVAL_ACCEL, numRowAdded))
+          # reset counter
+          addRowCounterSecs = Math.max(ADDROW_TIMER_MIN, ADDROW_TIMER_CEILING * Math.pow(ADDROW_TIMER_MULTIPLIER, numRowAdded))
+          console.log addRowCounterSecs
         addRowCounterSecs = addRowCounterSecs - 1*refresh
     ), 1000 * refresh
 
@@ -752,9 +767,9 @@ jQuery.fn.putInMatrix = (loc, pop) ->
         if looseguys.length >1
           bonussec = Math.round(looseguys.length * DROP_TIME_MULTIPLER)
           newsec = addRowCounterSecs + bonussec
-          newsec = Math.min(newsec, ROW_COUNTER_INTERVAL)
+          newsec = Math.min(newsec, ADDROW_TIMER_CEILING)
           addRowCounterSecs = newsec
-          $("#addrowmeter").css("width", addRowCounterSecs/ROW_COUNTER_INTERVAL*100 + "%")
+          $("#addrowmeter").css("width", addRowCounterSecs/ADDROW_TIMER_CEILING*100 + "%")
 
         # calc loose guys score
         if looseguys.length > 0  
