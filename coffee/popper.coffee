@@ -612,9 +612,9 @@ jQuery.fn.putInMatrix = (loc, pop) ->
       # calc same color score
       oldScore = parseInt($("#score").text())
       $("#score").text(oldScore + sameColorLocs.length)
-      if text(oldScore + sameColorLocs.length > 999
+      if oldScore + sameColorLocs.length > 999
         $("#score-container").css("font-size", "32px")
-      else if text(oldScore + sameColorLocs.length > 9999
+      else if oldScore + sameColorLocs.length > 9999
         $("#score-container").css("font-size", "28px")
 
       drop(sameColorLocs, "fade", () ->
@@ -672,9 +672,9 @@ jQuery.fn.putInMatrix = (loc, pop) ->
           bonuspts = 0
         oldScore = parseInt($("#score").text())
         $("#score").text(oldScore + looseguys.length + bonuspts) # do something fancier here
-        if text(oldScore + sameColorLocs.length > 999
+        if oldScore + looseguys.length + bonuspts > 999
           $("#score-container").css("font-size", "32px")
-        else if text(oldScore + sameColorLocs.length > 9999
+        else if oldScore + looseguys.length + bonuspts > 9999
           $("#score-container").css("font-size", "28px")
 
         # drop it like it's hot
