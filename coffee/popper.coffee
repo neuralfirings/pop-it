@@ -1,44 +1,76 @@
 # Some constants
 # Do stuff with this so it's not so global later
-BUBBLE_BORDER = 5
-BUBBLE_RADIUS = 25
-CONTAINER_BORDER = 5
+BUBBLE_BORDER = 5 # constant, I think
+BUBBLE_RADIUS = 25 # change to number of bubbles
+CONTAINER_BORDER = 5 # constant
 SPEED = 20 # speed of the shooter
 MAX_ANGLE = 75 # max angle of the shooter
 BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"] # should corrlate with CSS classes
-ROW_COUNTER_CEILING = 10000 # when counter reaches this it adds a new row, so lower the number is harder
-ROW_COUNTER_INTERVAL = 15 # seconds before new layer
+ROW_COUNTER_CEILING = 0 # when counter reaches this it adds a new row, so lower the number is harder; 0 for infinite
+ROW_COUNTER_CEILING_RAND = 2 # as counter increments, it can increment 1-this number at random 
+ROW_COUNTER_INTERVAL = 20  # seconds before new layer, 0 for infinite
 MAX_ROW_NUM = 10 # after this it's game over sadface
 DROP_MULTIPLER = 1.2 # multiple of points you get when you drop bubbles
 DROP_TIME_MULTIPLER = 0.5 # dropped * this = extra seconds you get
 DEFAULT_ROWS = 3
 
+# URL Params.. for easy play testing
+getUrlParam = (name) ->
+  name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]")
+  regex = new RegExp("[\\?&]" + name + "=([^&#]*)")
+  results = regex.exec(location.search)
+  (if not results? then "" else decodeURIComponent(results[1].replace(/\+/g, " ").replace(/\//g, '')))
+if getUrlParam("speed") != ""
+  SPEED = getUrlParam("speed")
+if getUrlParam("angle") != ""
+  MAX_ANGLE = getUrlParam("angle")
+if getUrlParam("ctr") != ""
+  ROW_COUNTER_CEILING = getUrlParam("ctr")
+if getUrlParam("ctrr") != ""
+  ROW_COUNTER_CEILING_RAND = getUrlParam("ctrr")
+if getUrlParam("timer") != ""
+  ROW_COUNTER_INTERVAL = getUrlParam("timer")
+if getUrlParam("max") != ""
+  MAX_ROW_NUM = getUrlParam("max")
+if getUrlParam("db") != ""
+  DROP_MULTIPLER = getUrlParam("db")
+if getUrlParam("dbt") != ""
+  DROP_TIME_MULTIPLER = getUrlParam("dbt")
+if getUrlParam("rows") != ""
+  DEFAULT_ROWS = getUrlParam("rows")
+
+
 # starter values
-addRowCounter = 0 # starter value
-shooting = false
-currMatrix = ""
+shooting = false 
 isGameOver = false
 isPaused = true
 isWon = false
+currMatrix = ""
 bubbleMatrix = [] # the matrix currently in use
 bubbleMatrixOne = [] # because of the hexagonal thing
 bubbleMatrixTwo = [] # because of the hexagonal thing
-addRowCounterSecs = ROW_COUNTER_INTERVAL
+addRowCounter = 0 # starter value
+addRowCounterSecs = 1
 
 $(document).ready ->
-  $("#addrowmeter").css("width", "100%")
-  $("#timer").text(ROW_COUNTER_INTERVAL)
 
   shooter = $("<div class='popper-shooter'></div>")
   shootercontrol = $("<div id='shooter-control'></div>")
   shooterbase = $("<div id='shooter-base'></div>")
 
   # overlays!
+  if ROW_COUNTER_CEILING != 0
+    rowcounterinfo = "New row every " + ROW_COUNTER_CEILING/ROW_COUNTER_CEILING_RAND + " to " + ROW_COUNTER_CEILING + " turns.<br><br>"
+  else
+    rowcounterinfo = ""
+  if ROW_COUNTER_INTERVAL != 0
+    rowintervalinfo = "New row every " + ROW_COUNTER_INTERVAL + " seconds.<br><br>"
+  else
+    rowintervalinfo = ""
   startoverlay = $("<div id='startscreen' class='overlay'></div>")
   startoverlay.append """
     <p>Clear the board.<br /><br />
-    Connect 3 or more of the similar colors to POP them.<br /><br />
-    ..eh.. you'll figure out the rest.<br /><br />
+    Connect 3 or more of the similar colors to POP them.<br /><br /> """ + rowcounterinfo + rowintervalinfo + """
     <button class="btn btn-primary btn-large" id="startplaying">Start Playing</button></p>
   """
   gameoverlay = $("<div id='gameover' class='overlay'></div>")
@@ -95,11 +127,15 @@ $(document).ready ->
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
-      addRowCounter += Math.floor(Math.random() * 2)+1
-      if addRowCounter > ROW_COUNTER_CEILING
-        addRow()
-        addRowCounter = 0
 
+      # increment counter
+      if ROW_COUNTER_CEILING != 0
+        addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND)+1
+        if addRowCounter > ROW_COUNTER_CEILING
+          addRow()
+          addRowCounter = 0
+
+      # change color options for the shoooter
       i = 0
       while i < BUBBLE_OPTIONS.length
         $(".popper-shooter").removeClass "popper-" + BUBBLE_OPTIONS[i]
@@ -116,10 +152,11 @@ $(document).ready ->
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
-      addRowCounter += Math.floor(Math.random() * 2)+1
-      if addRowCounter > ROW_COUNTER_CEILING
-        addRow()
-        addRowCounter = 0 
+      if ROW_COUNTER_CEILING != 0
+        addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND)+1
+        if addRowCounter > ROW_COUNTER_CEILING
+          addRow()
+          addRowCounter = 0 
 
       i = 0
       while i < BUBBLE_OPTIONS.length
@@ -184,19 +221,35 @@ $(document).ready ->
       i++
     j++
 
-  # Add Rows Mechanismmmmmmmmmm
+  # Add Rows Mechanismmmmmmmmmm Timers, Counters, oh my!
+  # if ROW_COUNTER_CEILING == 0
+  #   $("#rowcounter-container").hide()
+  # else
+  #   $("#rowcounter-container").show()
+  #   $("#rowcounter-info").text("New row every " + ROW_COUNTER_CEILING/ROW_COUNTER_CEILING_RAND + " to " + ROW_COUNTER_CEILING = " turns")
+
+
+  if ROW_COUNTER_INTERVAL == 0
+    $("#timer-container").hide()
+    addRowCounterSecs = 1
+  else
+    $("#timer-container").show()
+    $("#addrowmeter").css("width", "100%")
+    $("#timer").text(ROW_COUNTER_INTERVAL)
+    addRowCounterSecs = ROW_COUNTER_INTERVAL
+    refresh = .1 # seconds
+    window.addrow = setInterval (() ->
+      if isPaused == false 
+        $("#timer").text(Math.ceil(addRowCounterSecs - 1*refresh))
+        $("#addrowmeter").css("width", (addRowCounterSecs-1*refresh)/ROW_COUNTER_INTERVAL*100 + "%")
+        addRowCounterSecs = addRowCounterSecs - 1*refresh
+        if addRowCounterSecs < 1
+          addRow()
+          addRowCounterSecs = ROW_COUNTER_INTERVAL
+    ), 1000 * refresh
+
   addRows(DEFAULT_ROWS)
-  addRowCounterSecs = ROW_COUNTER_INTERVAL
-  refresh = .1 # seconds
-  window.addrow = setInterval (() ->
-    if isPaused == false 
-      $("#timer").text(Math.ceil(addRowCounterSecs - 1*refresh))
-      $("#addrowmeter").css("width", (addRowCounterSecs-1*refresh)/ROW_COUNTER_INTERVAL*100 + "%")
-      addRowCounterSecs = addRowCounterSecs - 1*refresh
-      if addRowCounterSecs < 1
-        addRow()
-        addRowCounterSecs = ROW_COUNTER_INTERVAL
-  ), 1000 * refresh
+  
   # addRow(["red", "red", "red", "red", "red", "red", "red", "red", "red", "red", "red"])
   
   # CLICKS
@@ -580,6 +633,25 @@ checkIfWon = () ->
 
   return didIWin
 
+addToScore = (deltaScore) ->
+  # calc same color score
+  oldScore = parseInt($("#score").text())
+  newScore = oldScore + deltaScore
+
+  if newScore < 10
+    $("#score").text("0000" + newScore)
+  else if newScore >= 10
+    $("#score").text("000" + newScore)
+  else if newScore >= 100
+    $("#score").text("00" + newScore)
+  else if newScore >= 1000
+    $("#score").text("0" + newScore)
+  else if newScore >= 10000
+    $("#score").text(newScore)
+  else 
+    $("#score").text(newScore)
+    $("#score-container").css("font-size", "28px")
+
 ############################################################
 ### jQuery add ons, mostly relatied to shooting a bubble ###
 ############################################################
@@ -610,12 +682,13 @@ jQuery.fn.putInMatrix = (loc, pop) ->
     sameColorLocs = checkCluster(loc, true)
     if sameColorLocs.length >= 3
       # calc same color score
-      oldScore = parseInt($("#score").text())
-      $("#score").text(oldScore + sameColorLocs.length)
-      if oldScore + sameColorLocs.length > 999
-        $("#score-container").css("font-size", "32px")
-      else if oldScore + sameColorLocs.length > 9999
-        $("#score-container").css("font-size", "28px")
+      # oldScore = parseInt($("#score").text())
+      addToScore(sameColorLocs.length)
+      # $("#score").text(oldScore + sameColorLocs.length)
+      # if oldScore + sameColorLocs.length > 999
+      #   $("#score-container").css("font-size", "32px")
+      # else if oldScore + sameColorLocs.length > 9999
+      #   $("#score-container").css("font-size", "28px")
 
       drop(sameColorLocs, "fade", () ->
         # code to drop loose bubbles
@@ -670,12 +743,14 @@ jQuery.fn.putInMatrix = (loc, pop) ->
             noticeFlash("<small>Dropped 1</small><br />" + bonuspts + " bonus point!")
         else
           bonuspts = 0
-        oldScore = parseInt($("#score").text())
-        $("#score").text(oldScore + looseguys.length + bonuspts) # do something fancier here
-        if oldScore + looseguys.length + bonuspts > 999
-          $("#score-container").css("font-size", "32px")
-        else if oldScore + looseguys.length + bonuspts > 9999
-          $("#score-container").css("font-size", "28px")
+
+        addToScore(looseguys.length + bonuspts)
+        # oldScore = parseInt($("#score").text())
+        # $("#score").text(oldScore + looseguys.length + bonuspts) # do something fancier here
+        # if oldScore + looseguys.length + bonuspts > 999
+        #   $("#score-container").css("font-size", "32px")
+        # else if oldScore + looseguys.length + bonuspts > 9999
+        #   $("#score-container").css("font-size", "28px")
 
         # drop it like it's hot
         drop(looseguys, "drop", () ->
@@ -738,3 +813,4 @@ jQuery.fn.shoot = (startDeg) ->
     return
   , 5)
   div
+
