@@ -17,7 +17,7 @@ addRowCounter = 0 # starter value
 shooting = false
 currMatrix = ""
 isGameOver = false
-isPaused = false
+isPaused = true
 isWon = false
 bubbleMatrix = [] # the matrix currently in use
 bubbleMatrixOne = [] # because of the hexagonal thing
@@ -30,18 +30,27 @@ $(document).ready ->
   shooter = $("<div class='popper-shooter'></div>")
   shootercontrol = $("<div id='shooter-control'></div>")
   shooterbase = $("<div id='shooter-base'></div>")
+
+  # overlays!
+  startoverlay = $("<div id='startscreen' class='overlay'></div>")
+  startoverlay.append """
+    <p>Clear the board.<br /><br />
+    Connect 3 or more of the similar colors to POP them.<br /><br />
+    ..eh.. you'll figure out the rest.<br /><br />
+    <button class="btn btn-primary btn-large" id="startplaying">Start Playing</button></p>
+  """
+  gameoverlay = $("<div id='gameover' class='overlay'></div>")
+  gameoverlay.append "<p>Game Over <i class='fa fa-frown-o'></i></p>"
+  pauseoverlay = $("<div id='pause' class='overlay'></div>")
+  pauseoverlay.append "<p>Paused. o_O</p>"
+  winoverlay = $("<div id='victory' class='overlay'></div>")
+  winoverlay.append "<p>VICTORY! <i class='fa fa-smile-o'></p>"
+
+  # .. underlay?
+  noticeoverlay = $("<div id='notice-overlay'></div>")
+
+  # uber overlay
   shooteroverlay = $("<div id='shooter-control-overlay'></div>")
-  gameoverlay = $("<div id='gameover'></div>")
-  gameoverlay.append "<div style='color: #300; text-align: center; font-size: 60px; margin-top: 200px'><strong>Game Over <i class='fa fa-frown-o'></i></strong></div>"
-
-  pauseoverlay = $("<div id='pause'></div>")
-  pauseoverlay.append "<div style='color: #333; text-align: center; font-size: 60px; margin-top: 200px'><strong>Paused o_O</strong></div>"
-
-  winoverlay = $("<div id='victory'></div>")
-  winoverlay.append "<div style='color: #333; text-align: center; font-size: 60px; margin-top: 200px'><strong>VICTORY!  <i class='fa fa-smile-o'></i></strong></div>"
-
-
-  noticeoverlay = $("<div id='notice-overlay'>asdf</div>")
 
   $("#popper-container").append shootercontrol
   $("#popper-container").append shooterbase
@@ -51,6 +60,7 @@ $(document).ready ->
   $("#popper-container").append winoverlay
   $("#popper-container").append shooter
   $("#popper-container").append noticeoverlay
+  $("#popper-container").append startoverlay
 
   # Shooter code
   rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
@@ -193,8 +203,13 @@ $(document).ready ->
     else
       unpause()
       $(this).text("Pause")
-  return # end of document ready
 
+  $("#startplaying").click () ->
+    $("#startscreen").hide()
+    unpause()
+    $("#popper-container").css("cursor", "none")
+
+# return # end of document ready
 
 noticeFlash = (str) ->
   $("#notice-overlay").text(str).show().fadeOut({duration: 1200})
@@ -458,48 +473,53 @@ lookAround = (loc) ->
   return enviro2
 
 drop = (locs, type, callback) ->
-  if locs instanceof Array
-    locs = locs
+  if locs == undefined
+    return
   else
-    locs = [locs]
-
-  if type == "drop"
-    toploc = _.min(locs, (d) ->
-      return d.row; 
-    )
-    topRow = toploc.row
-    topRowDFB = bubbleMatrix[topRow][0].y - $("#popper-container").height()
-    console.log "topRowDFB", topRowDFB
-    # DFB = distance from top, where it should end up when dropped
-
-
-  for l in locs
-    # clear matrix
-    bubbleMatrix[l.row][l.num].color = undefined
-    bubbleMatrix[l.row][l.num].div = undefined
+    if locs instanceof Array
+      if locs.length == 0
+        return
+      else
+        locs = locs
+    else
+      locs = [locs]
 
     if type == "drop"
-      # calculate where l should end up
-      target = topRowDFB
-      multipler = Math.pow(l.row - topRow + 1, 1.1) # lower rows to drop faster
-      delta = -50*multipler
-      target = target+delta 
+      toploc = _.min(locs, (d) ->
+        return d.row; 
+      )
+      topRow = toploc.row
+      topRowDFB = bubbleMatrix[topRow][0].y - $("#popper-container").height()
+      # DFB = distance from top, where it should end up when dropped
+
+
+    for l in locs
+      # clear matrix
+      bubbleMatrix[l.row][l.num].color = undefined
+      bubbleMatrix[l.row][l.num].div = undefined
 
       ldiv = getDivFromLoc(l)
-      ldiv.animate(
-        { bottom: target + "px"}, 
-        { duration: 600, complete: () ->
+      if type == "drop"
+        # calculate where l should end up
+        target = topRowDFB
+        multipler = Math.pow(l.row - topRow + 1, 1.1) # lower rows to drop faster
+        delta = -50*multipler
+        target = target+delta 
+
+        ldiv.animate(
+          { bottom: target + "px"}, 
+          { duration: 600, complete: () ->
+            if callback != undefined
+              callback()
+          }
+        );
+      else
+        ldiv.fadeOut({duration: 150, complete: () ->
           if callback != undefined
-            callback()
-        }
-      );
-    else
-      ldiv.fadeOut({duration: 150, complete: () ->
-        if callback != undefined
-          setTimeout (() ->
-            callback()
-          ), 10
-      });
+            setTimeout (() ->
+              callback()
+            ), 10
+        });
   return
 
 getDivFromLoc = (loc) ->
