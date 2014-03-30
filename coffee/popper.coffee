@@ -7,11 +7,13 @@ SPEED = 20 # speed of the shooter
 MAX_ANGLE = 75 # max angle of the shooter
 BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"] # should corrlate with CSS classes
 ROW_COUNTER_CEILING = 0 # when counter reaches this it adds a new row, so lower the number is harder; 0 for infinite
-ROW_COUNTER_CEILING_RAND = 2 # as counter increments, it can increment 1-this number at random 
+ROW_COUNTER_CEILING_RAND = 1 # as counter increments, it can increment 1-this number at random 
+ROW_COUNTER_CEILING_ACCEL = 0.8 # as you get more turns, row ceiling gets lower (not exponentially)
 ROW_COUNTER_INTERVAL = 20  # seconds before new layer, 0 for infinite
+ROW_COUNTER_INTERVAL_ACCEL = .9  # as you get more turns your seconds drop (exponentially)
 MAX_ROW_NUM = 10 # after this it's game over sadface
 DROP_MULTIPLER = 1.2 # multiple of points you get when you drop bubbles
-DROP_TIME_MULTIPLER = 0.5 # dropped * this = extra seconds you get
+DROP_TIME_MULTIPLER = 1 # dropped * this = extra seconds you get
 DEFAULT_ROWS = 3
 
 # URL Params.. for easy play testing
@@ -28,8 +30,12 @@ if getUrlParam("ctr") != ""
   ROW_COUNTER_CEILING = parseFloat(getUrlParam("ctr"))
 if getUrlParam("ctrr") != ""
   ROW_COUNTER_CEILING_RAND = parseFloat(getUrlParam("ctrr"))
+if getUrlParam("accelc") != ""
+  ROW_COUNTER_CEILING_ACCEL = parseFloat(getUrlParam("accelc"))
 if getUrlParam("timer") != ""
   ROW_COUNTER_INTERVAL = parseFloat(getUrlParam("timer"))
+if getUrlParam("accelt") != ""
+  ROW_COUNTER_INTERVAL_ACCEL = parseFloat(getUrlParam("accelt"))
 if getUrlParam("max") != ""
   MAX_ROW_NUM = parseFloat(getUrlParam("max"))
 if getUrlParam("db") != ""
@@ -51,6 +57,7 @@ bubbleMatrixOne = [] # because of the hexagonal thing
 bubbleMatrixTwo = [] # because of the hexagonal thing
 addRowCounter = 0 # starter value
 addRowCounterSecs = 1
+numRowAdded = 0
 
 $(document).ready ->
 
@@ -60,11 +67,24 @@ $(document).ready ->
 
   # overlays!
   if ROW_COUNTER_CEILING != 0
-    rowcounterinfo = "New row every " + ROW_COUNTER_CEILING/ROW_COUNTER_CEILING_RAND + " to " + ROW_COUNTER_CEILING + " turns.<br><br>"
+    if ROW_COUNTER_CEILING_ACCEL != 0
+      fornow = "<br>...for now"
+    else
+      fornow = ""
+    if ROW_COUNTER_CEILING_RAND != 1
+      minCtr = Math.ceil(ROW_COUNTER_CEILING/ROW_COUNTER_CEILING_RAND) + " to " 
+    else
+      minCtr = ""
+    rowcounterinfo = "New row every " + minCtr + ROW_COUNTER_CEILING + " turns" + fornow + ".<br><br>"
   else
     rowcounterinfo = ""
+
   if ROW_COUNTER_INTERVAL != 0
-    rowintervalinfo = "New row every " + ROW_COUNTER_INTERVAL + " seconds.<br><br>"
+    if ROW_COUNTER_INTERVAL_ACCEL < 1
+      fornow = "<br>...for now"
+    else 
+      fornow = ""
+    rowintervalinfo = "New row every " + ROW_COUNTER_INTERVAL + " secs" + fornow + ".<br><br>"
   else
     rowintervalinfo = ""
   startoverlay = $("<div id='startscreen' class='overlay'></div>")
@@ -131,8 +151,9 @@ $(document).ready ->
       # increment counter
       if ROW_COUNTER_CEILING != 0
         addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND)+1
-        if addRowCounter > ROW_COUNTER_CEILING
+        if addRowCounter > ROW_COUNTER_CEILING - ROW_COUNTER_CEILING_ACCEL * numRowAdded
           addRow()
+          numRowAdded++
           addRowCounter = 0
 
       # change color options for the shoooter
@@ -154,8 +175,9 @@ $(document).ready ->
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
       if ROW_COUNTER_CEILING != 0
         addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND)+1
-        if addRowCounter > ROW_COUNTER_CEILING
+        if addRowCounter > ROW_COUNTER_CEILING - ROW_COUNTER_CEILING_ACCEL * numRowAdded
           addRow()
+          numRowAdded++
           addRowCounter = 0 
 
       i = 0
@@ -228,7 +250,6 @@ $(document).ready ->
   #   $("#rowcounter-container").show()
   #   $("#rowcounter-info").text("New row every " + ROW_COUNTER_CEILING/ROW_COUNTER_CEILING_RAND + " to " + ROW_COUNTER_CEILING = " turns")
 
-
   if ROW_COUNTER_INTERVAL == 0
     $("#timer-container").hide()
     addRowCounterSecs = 1
@@ -245,7 +266,8 @@ $(document).ready ->
         addRowCounterSecs = addRowCounterSecs - 1*refresh
         if addRowCounterSecs < 1
           addRow()
-          addRowCounterSecs = ROW_COUNTER_INTERVAL
+          numRowAdded++
+          addRowCounterSecs = ROW_COUNTER_INTERVAL * Math.pow(ROW_COUNTER_INTERVAL_ACCEL, numRowAdded)
     ), 1000 * refresh
 
   addRows(DEFAULT_ROWS)
