@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_COUNTER_CEILING, ROW_COUNTER_CEILING_ACCEL, ROW_COUNTER_CEILING_RAND, ROW_COUNTER_INTERVAL, ROW_COUNTER_INTERVAL_ACCEL, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, numRowAdded, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
+var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_COUNTER_CEILING, ROW_COUNTER_CEILING_ACCEL, ROW_COUNTER_CEILING_RAND, ROW_COUNTER_INTERVAL, ROW_COUNTER_INTERVAL_ACCEL, ROW_COUNTER_INTERVAL_MIN, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, numRowAdded, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
 
 BUBBLE_BORDER = 5;
 
@@ -18,7 +18,9 @@ ROW_COUNTER_CEILING_RAND = 1;
 
 ROW_COUNTER_CEILING_ACCEL = 0.8;
 
-ROW_COUNTER_INTERVAL = 20;
+ROW_COUNTER_INTERVAL = 10;
+
+ROW_COUNTER_INTERVAL_MIN = 5;
 
 ROW_COUNTER_INTERVAL_ACCEL = .9;
 
@@ -64,6 +66,10 @@ if (getUrlParam("accelc") !== "") {
 
 if (getUrlParam("timer") !== "") {
   ROW_COUNTER_INTERVAL = parseFloat(getUrlParam("timer"));
+}
+
+if (getUrlParam("tfloor") !== "") {
+  ROW_COUNTER_INTERVAL_MIN = parseFloat(getUrlParam("tfloor"));
 }
 
 if (getUrlParam("accelt") !== "") {
@@ -300,12 +306,13 @@ $(document).ready(function() {
     refresh = .1;
     window.addrow = setInterval((function() {
       if (isPaused === false) {
-        $("#timer").text(Math.max(0, Math.floor(addRowCounterSecs)));
+        $("#timer").text(Math.max(0, Math.ceil(addRowCounterSecs)));
         $("#addrowmeter").css("width", (addRowCounterSecs - 1 * refresh) / ROW_COUNTER_INTERVAL * 100 + "%");
         if (addRowCounterSecs < 0) {
           addRow();
           numRowAdded++;
-          addRowCounterSecs = Math.max(2, ROW_COUNTER_INTERVAL * Math.pow(ROW_COUNTER_INTERVAL_ACCEL, numRowAdded));
+          addRowCounterSecs = Math.max(ROW_COUNTER_INTERVAL_MIN, ROW_COUNTER_INTERVAL * Math.pow(ROW_COUNTER_INTERVAL_ACCEL, numRowAdded));
+          console.log(addRowCounterSecs);
         }
         return addRowCounterSecs = addRowCounterSecs - 1 * refresh;
       }

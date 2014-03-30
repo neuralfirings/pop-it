@@ -9,7 +9,8 @@ BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"] # should corrlate with CSS c
 ROW_COUNTER_CEILING = 0 # when counter reaches this it adds a new row, so lower the number is harder; 0 for infinite
 ROW_COUNTER_CEILING_RAND = 1 # as counter increments, it can increment 1-this number at random 
 ROW_COUNTER_CEILING_ACCEL = 0.8 # as you get more turns, row ceiling gets lower (not exponentially)
-ROW_COUNTER_INTERVAL = 20  # seconds before new layer, 0 for infinite
+ROW_COUNTER_INTERVAL = 10  # seconds before new layer, 0 for infinite
+ROW_COUNTER_INTERVAL_MIN = 5  # mininum seconds before new layer
 ROW_COUNTER_INTERVAL_ACCEL = .9  # as you get more turns your seconds drop (exponentially)
 MAX_ROW_NUM = 10 # after this it's game over sadface
 DROP_MULTIPLER = 1.2 # multiple of points you get when you drop bubbles
@@ -34,6 +35,8 @@ if getUrlParam("accelc") != ""
   ROW_COUNTER_CEILING_ACCEL = parseFloat(getUrlParam("accelc"))
 if getUrlParam("timer") != ""
   ROW_COUNTER_INTERVAL = parseFloat(getUrlParam("timer"))
+if getUrlParam("tfloor") != ""
+  ROW_COUNTER_INTERVAL_MIN = parseFloat(getUrlParam("tfloor"))
 if getUrlParam("accelt") != ""
   ROW_COUNTER_INTERVAL_ACCEL = parseFloat(getUrlParam("accelt"))
 if getUrlParam("max") != ""
@@ -261,12 +264,14 @@ $(document).ready ->
     refresh = .1 # seconds
     window.addrow = setInterval (() ->
       if isPaused == false 
-        $("#timer").text(Math.max(0, Math.floor(addRowCounterSecs)))
+        $("#timer").text(Math.max(0, Math.ceil(addRowCounterSecs)))
         $("#addrowmeter").css("width", (addRowCounterSecs-1*refresh)/ROW_COUNTER_INTERVAL*100 + "%")
         if addRowCounterSecs < 0
           addRow()
           numRowAdded++
-          addRowCounterSecs = Math.max(2, ROW_COUNTER_INTERVAL * Math.pow(ROW_COUNTER_INTERVAL_ACCEL, numRowAdded))
+          # reset counter
+          addRowCounterSecs = Math.max(ROW_COUNTER_INTERVAL_MIN, ROW_COUNTER_INTERVAL * Math.pow(ROW_COUNTER_INTERVAL_ACCEL, numRowAdded))
+          console.log addRowCounterSecs
         addRowCounterSecs = addRowCounterSecs - 1*refresh
     ), 1000 * refresh
 
