@@ -1,4 +1,4 @@
-var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_COUNTER_CEILING, ROW_COUNTER_INTERVAL, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
+var BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_COUNTER_CEILING, ROW_COUNTER_CEILING_RAND, ROW_COUNTER_INTERVAL, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
 
 BUBBLE_BORDER = 5;
 
@@ -12,9 +12,11 @@ MAX_ANGLE = 75;
 
 BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"];
 
-ROW_COUNTER_CEILING = 10000;
+ROW_COUNTER_CEILING = 0;
 
-ROW_COUNTER_INTERVAL = 15;
+ROW_COUNTER_CEILING_RAND = 2;
+
+ROW_COUNTER_INTERVAL = 20;
 
 MAX_ROW_NUM = 10;
 
@@ -24,11 +26,55 @@ DROP_TIME_MULTIPLER = 0.5;
 
 DEFAULT_ROWS = 3;
 
-addRowCounter = 0;
+getUrlParam = function(name) {
+  var regex, results;
+  name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+  regex = new RegExp("[\\?&]" + name + "=([^&#]*)");
+  results = regex.exec(location.search);
+  if (results == null) {
+    return "";
+  } else {
+    return decodeURIComponent(results[1].replace(/\+/g, " ").replace(/\//g, ''));
+  }
+};
+
+if (getUrlParam("speed") !== "") {
+  SPEED = getUrlParam("speed");
+}
+
+if (getUrlParam("angle") !== "") {
+  MAX_ANGLE = getUrlParam("angle");
+}
+
+if (getUrlParam("ctr") !== "") {
+  ROW_COUNTER_CEILING = getUrlParam("ctr");
+}
+
+if (getUrlParam("ctrr") !== "") {
+  ROW_COUNTER_CEILING_RAND = getUrlParam("ctrr");
+}
+
+if (getUrlParam("timer") !== "") {
+  ROW_COUNTER_INTERVAL = getUrlParam("timer");
+}
+
+if (getUrlParam("max") !== "") {
+  MAX_ROW_NUM = getUrlParam("max");
+}
+
+if (getUrlParam("db") !== "") {
+  DROP_MULTIPLER = getUrlParam("db");
+}
+
+if (getUrlParam("dbt") !== "") {
+  DROP_TIME_MULTIPLER = getUrlParam("dbt");
+}
+
+if (getUrlParam("rows") !== "") {
+  DEFAULT_ROWS = getUrlParam("rows");
+}
 
 shooting = false;
-
-currMatrix = "";
 
 isGameOver = false;
 
@@ -36,23 +82,35 @@ isPaused = true;
 
 isWon = false;
 
+currMatrix = "";
+
 bubbleMatrix = [];
 
 bubbleMatrixOne = [];
 
 bubbleMatrixTwo = [];
 
-addRowCounterSecs = ROW_COUNTER_INTERVAL;
+addRowCounter = 0;
+
+addRowCounterSecs = 1;
 
 $(document).ready(function() {
-  var currColor, currColorClass, gameoverlay, h, i, j, margin, noticeoverlay, pauseoverlay, rand, refresh, shooter, shooterbase, shootercontrol, shooteroverlay, startoverlay, w, winoverlay, x, xNum, y, yNum;
-  $("#addrowmeter").css("width", "100%");
-  $("#timer").text(ROW_COUNTER_INTERVAL);
+  var currColor, currColorClass, gameoverlay, h, i, j, margin, noticeoverlay, pauseoverlay, rand, refresh, rowcounterinfo, rowintervalinfo, shooter, shooterbase, shootercontrol, shooteroverlay, startoverlay, w, winoverlay, x, xNum, y, yNum;
   shooter = $("<div class='popper-shooter'></div>");
   shootercontrol = $("<div id='shooter-control'></div>");
   shooterbase = $("<div id='shooter-base'></div>");
+  if (ROW_COUNTER_CEILING !== 0) {
+    rowcounterinfo = "New row every " + ROW_COUNTER_CEILING / ROW_COUNTER_CEILING_RAND + " to " + ROW_COUNTER_CEILING + " turns.<br><br>";
+  } else {
+    rowcounterinfo = "";
+  }
+  if (ROW_COUNTER_INTERVAL !== 0) {
+    rowintervalinfo = "New row every " + ROW_COUNTER_INTERVAL + " seconds.<br><br>";
+  } else {
+    rowintervalinfo = "";
+  }
   startoverlay = $("<div id='startscreen' class='overlay'></div>");
-  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br />\n..eh.. you'll figure out the rest.<br /><br />\n<button class=\"btn btn-primary btn-large\" id=\"startplaying\">Start Playing</button></p>");
+  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br /> " + rowcounterinfo + rowintervalinfo + "<button class=\"btn btn-primary btn-large\" id=\"startplaying\">Start Playing</button></p>");
   gameoverlay = $("<div id='gameover' class='overlay'></div>");
   gameoverlay.append("<p>Game Over <i class='fa fa-frown-o'></i></p>");
   pauseoverlay = $("<div id='pause' class='overlay'></div>");
@@ -103,10 +161,12 @@ $(document).ready(function() {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
-      addRowCounter += Math.floor(Math.random() * 2) + 1;
-      if (addRowCounter > ROW_COUNTER_CEILING) {
-        addRow();
-        addRowCounter = 0;
+      if (ROW_COUNTER_CEILING !== 0) {
+        addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND) + 1;
+        if (addRowCounter > ROW_COUNTER_CEILING) {
+          addRow();
+          addRowCounter = 0;
+        }
       }
       i = 0;
       while (i < BUBBLE_OPTIONS.length) {
@@ -126,10 +186,12 @@ $(document).ready(function() {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
-      addRowCounter += Math.floor(Math.random() * 2) + 1;
-      if (addRowCounter > ROW_COUNTER_CEILING) {
-        addRow();
-        addRowCounter = 0;
+      if (ROW_COUNTER_CEILING !== 0) {
+        addRowCounter += Math.floor(Math.random() * ROW_COUNTER_CEILING_RAND) + 1;
+        if (addRowCounter > ROW_COUNTER_CEILING) {
+          addRow();
+          addRowCounter = 0;
+        }
       }
       i = 0;
       while (i < BUBBLE_OPTIONS.length) {
@@ -196,20 +258,28 @@ $(document).ready(function() {
     }
     j++;
   }
-  addRows(DEFAULT_ROWS);
-  addRowCounterSecs = ROW_COUNTER_INTERVAL;
-  refresh = .1;
-  window.addrow = setInterval((function() {
-    if (isPaused === false) {
-      $("#timer").text(Math.ceil(addRowCounterSecs - 1 * refresh));
-      $("#addrowmeter").css("width", (addRowCounterSecs - 1 * refresh) / ROW_COUNTER_INTERVAL * 100 + "%");
-      addRowCounterSecs = addRowCounterSecs - 1 * refresh;
-      if (addRowCounterSecs < 1) {
-        addRow();
-        return addRowCounterSecs = ROW_COUNTER_INTERVAL;
+  if (ROW_COUNTER_INTERVAL === 0) {
+    $("#timer-container").hide();
+    addRowCounterSecs = 1;
+  } else {
+    $("#timer-container").show();
+    $("#addrowmeter").css("width", "100%");
+    $("#timer").text(ROW_COUNTER_INTERVAL);
+    addRowCounterSecs = ROW_COUNTER_INTERVAL;
+    refresh = .1;
+    window.addrow = setInterval((function() {
+      if (isPaused === false) {
+        $("#timer").text(Math.ceil(addRowCounterSecs - 1 * refresh));
+        $("#addrowmeter").css("width", (addRowCounterSecs - 1 * refresh) / ROW_COUNTER_INTERVAL * 100 + "%");
+        addRowCounterSecs = addRowCounterSecs - 1 * refresh;
+        if (addRowCounterSecs < 1) {
+          addRow();
+          return addRowCounterSecs = ROW_COUNTER_INTERVAL;
+        }
       }
-    }
-  }), 1000 * refresh);
+    }), 1000 * refresh);
+  }
+  addRows(DEFAULT_ROWS);
   $("#pause-button").click(function() {
     if (isPaused === false) {
       pause();
@@ -675,6 +745,26 @@ checkIfWon = function() {
   return didIWin;
 };
 
+addToScore = function(deltaScore) {
+  var newScore, oldScore;
+  oldScore = parseInt($("#score").text());
+  newScore = oldScore + deltaScore;
+  if (newScore < 10) {
+    return $("#score").text("0000" + newScore);
+  } else if (newScore >= 10) {
+    return $("#score").text("000" + newScore);
+  } else if (newScore >= 100) {
+    return $("#score").text("00" + newScore);
+  } else if (newScore >= 1000) {
+    return $("#score").text("0" + newScore);
+  } else if (newScore >= 10000) {
+    return $("#score").text(newScore);
+  } else {
+    $("#score").text(newScore);
+    return $("#score-container").css("font-size", "28px");
+  }
+};
+
 
 /* jQuery add ons, mostly relatied to shooting a bubble */
 
@@ -690,7 +780,7 @@ jQuery.fn.createBubble = function(color) {
 };
 
 jQuery.fn.putInMatrix = function(loc, pop) {
-  var coords, deltaScore, div, oldScore, sameColorLocs;
+  var coords, deltaScore, div, sameColorLocs;
   if (pop === void 0) {
     pop = true;
   }
@@ -706,13 +796,7 @@ jQuery.fn.putInMatrix = function(loc, pop) {
     deltaScore = 0;
     sameColorLocs = checkCluster(loc, true);
     if (sameColorLocs.length >= 3) {
-      oldScore = parseInt($("#score").text());
-      $("#score").text(oldScore + sameColorLocs.length);
-      if (oldScore + sameColorLocs.length > 999) {
-        $("#score-container").css("font-size", "32px");
-      } else if (oldScore + sameColorLocs.length > 9999) {
-        $("#score-container").css("font-size", "28px");
-      }
+      addToScore(sameColorLocs.length);
       drop(sameColorLocs, "fade", function() {
         var b, bonuspts, bonussec, furthest, i, l, loc_i, looseguys, n, newsec, r, topsChecked, wallcluster, _i, _len, _ref;
         topsChecked = [];
@@ -777,13 +861,7 @@ jQuery.fn.putInMatrix = function(loc, pop) {
         } else {
           bonuspts = 0;
         }
-        oldScore = parseInt($("#score").text());
-        $("#score").text(oldScore + looseguys.length + bonuspts);
-        if (oldScore + looseguys.length + bonuspts > 999) {
-          $("#score-container").css("font-size", "32px");
-        } else if (oldScore + looseguys.length + bonuspts > 9999) {
-          $("#score-container").css("font-size", "28px");
-        }
+        addToScore(looseguys.length + bonuspts);
         drop(looseguys, "drop", function() {
           if (checkIfWon() === true) {
             return win();

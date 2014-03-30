@@ -19,10 +19,15 @@
   }
 }
 #timer-container {
+  float: left; 
+  margin-right: 20px;
   .progress {
     padding: 5px;
     border-radius: 5px;
     border: solid 1px #DDD;
+    height: 45px; 
+    width: 300px;
+    margin-bottom: 0px;
 
     .progress-bar {
       box-shadow: 0 0 0 0;
@@ -30,6 +35,12 @@
       color: transparent;
     }
   }
+}
+#score-container {
+  float: right; 
+  margin-right: 3px; 
+  font-size: 45px; 
+  line-height: 40px;
 }
 #popper-container {
   width: 600px;
@@ -150,7 +161,7 @@
     display: block;
     z-index:  1001;
     p {
-      margin-top: 80px; 
+      margin-top: 50px; 
       font-size: 32px; 
       font-weight: 600;
       margin-left: 40px;
