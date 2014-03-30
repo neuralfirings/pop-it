@@ -4,10 +4,13 @@
   border-radius: 5px;
   color: #BBB;
   font-weight: bold;
-  padding: 5px 15px;
+  padding: 5px;
+  text-align: center;
   font-size: 14px;
   line-height: 2em;
-  cursor: pointer; }
+  cursor: pointer;
+  height: 45px;
+  width: 75px; }
   .btn-pause:hover {
     color: #CCC;
     background-color: #FAFAFA;

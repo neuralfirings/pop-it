@@ -203,7 +203,7 @@ $(document).ready ->
   $("#pause-button").click () ->
     if isPaused == false
       pause()
-      $(this).text("Unpause")
+      $(this).text("Go")
     else
       unpause()
       $(this).text("Pause")
@@ -612,6 +612,10 @@ jQuery.fn.putInMatrix = (loc, pop) ->
       # calc same color score
       oldScore = parseInt($("#score").text())
       $("#score").text(oldScore + sameColorLocs.length)
+      if text(oldScore + sameColorLocs.length > 999
+        $("#score-container").css("font-size", "32px")
+      else if text(oldScore + sameColorLocs.length > 9999
+        $("#score-container").css("font-size", "28px")
 
       drop(sameColorLocs, "fade", () ->
         # code to drop loose bubbles
@@ -668,6 +672,12 @@ jQuery.fn.putInMatrix = (loc, pop) ->
           bonuspts = 0
         oldScore = parseInt($("#score").text())
         $("#score").text(oldScore + looseguys.length + bonuspts) # do something fancier here
+        if text(oldScore + sameColorLocs.length > 999
+          $("#score-container").css("font-size", "32px")
+        else if text(oldScore + sameColorLocs.length > 9999
+          $("#score-container").css("font-size", "28px")
+
+        # drop it like it's hot
         drop(looseguys, "drop", () ->
           if checkIfWon() == true
             win()
