@@ -13,6 +13,15 @@
     background-color: #FAFAFA;
     border-color: #EEE; }
 
+#timer-container .progress {
+  padding: 5px;
+  border-radius: 5px;
+  border: solid 1px #DDD; }
+  #timer-container .progress .progress-bar {
+    box-shadow: 0 0 0 0;
+    background-color: #DDD;
+    color: transparent; }
+
 #popper-container {
   width: 600px;
   height: 600px;
@@ -21,7 +30,6 @@
   background: #FAFAFA;
   border: solid 5px #AAA;
   border-radius: 5px;
-  cursor: none;
   overflow: hidden; }
 
 .popper-shooter {
@@ -93,17 +101,7 @@
   opacity: 0;
   z-index: 1000; }
 
-#gameover {
-  width: 100%;
-  height: 100%;
-  background: #B99;
-  opacity: 0.6;
-  position: absolute;
-  bottom: 0px;
-  z-index: 999;
-  display: none; }
-
-#pause {
+.overlay {
   width: 100%;
   height: 100%;
   background: #BBB;
@@ -112,16 +110,33 @@
   bottom: 0px;
   z-index: 999;
   display: none; }
-
-#victory {
-  width: 100%;
-  height: 100%;
-  background: #CBEED8;
-  opacity: 0.6;
-  position: absolute;
-  bottom: 0px;
-  z-index: 999;
-  display: none; }
+  .overlay p {
+    color: #333;
+    text-align: center;
+    font-size: 60px;
+    margin-top: 200px;
+    font-weight: bold; }
+  .overlay#gameover {
+    background: #B99; }
+    .overlay#gameover p {
+      color: #300; }
+  .overlay#victory {
+    background: #CBEED8; }
+  .overlay#startscreen {
+    opacity: 0.9;
+    display: block;
+    z-index: 1001; }
+    .overlay#startscreen p {
+      margin-top: 80px;
+      font-size: 32px;
+      font-weight: 600;
+      margin-left: 40px;
+      margin-right: 40px; }
+      .overlay#startscreen p .btn {
+        border-radius: 5px;
+        border: solid 5px #0A5F7B;
+        font-size: 32px;
+        font-weight: 900; }
 
 #notice-overlay {
   background: transparent;

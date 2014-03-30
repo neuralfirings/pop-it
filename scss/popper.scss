@@ -15,6 +15,19 @@
     border-color: #EEE;
   }
 }
+#timer-container {
+  .progress {
+    padding: 5px;
+    border-radius: 5px;
+    border: solid 1px #DDD;
+
+    .progress-bar {
+      box-shadow: 0 0 0 0;
+      background-color: #DDD;
+      color: transparent;
+    }
+  }
+}
 #popper-container {
   width: 600px;
   height: 600px;
@@ -23,7 +36,7 @@
   background: #FAFAFA;
   border: solid 5px #AAA;
   border-radius: 5px;
-  cursor: none;
+  // cursor: none;
   overflow: hidden;
 }
 .popper-shooter {
@@ -103,17 +116,8 @@
   opacity: 0;
   z-index: 1000
 }
-#gameover {
-  width: 100%; 
-  height: 100%; 
-  background: #B99;
-  opacity: 0.6;
-  position: absolute;
-  bottom: 0px;
-  z-index: 999;
-  display: none;
-}
-#pause {
+
+.overlay {
   width: 100%; 
   height: 100%; 
   background: #BBB;
@@ -122,17 +126,80 @@
   bottom: 0px;
   z-index: 999;
   display: none;
+
+  p {
+    color: #333; 
+    text-align: center; 
+    font-size: 60px; 
+    margin-top: 200px;
+    font-weight: bold;
+  }
+
+  &#gameover { 
+    background: #B99; 
+    p {
+      color: #300;
+    }
+  }
+  &#victory { background: #CBEED8; }
+  &#startscreen { 
+    opacity: 0.9;
+    display: block;
+    z-index:  1001;
+    p {
+      margin-top: 80px; 
+      font-size: 32px; 
+      font-weight: 600;
+      margin-left: 40px;
+      margin-right: 40px;
+      .btn {
+        border-radius: 5px;
+        border: solid 5px #0A5F7B;
+        font-size: 32px;
+        font-weight: 900;
+      }
+    }
+  }
+
+
 }
-#victory {
-  width: 100%; 
-  height: 100%; 
-  background: #CBEED8;
-  opacity: 0.6;
-  position: absolute;
-  bottom: 0px;
-  z-index: 999;
-  display: none;
-}
+// #gameover {
+//   width: 100%; 
+//   height: 100%; 
+//   background: #B99;
+//   opacity: 0.6;
+//   position: absolute;
+//   bottom: 0px;
+//   z-index: 999;
+//   display: none;
+
+//   p {
+//     color: #300; 
+//     text-align: center; 
+//     font-size: 60px; 
+//     margin-top: 200px
+//   }
+// }
+// #pause {
+//   width: 100%; 
+//   height: 100%; 
+//   background: #BBB;
+//   opacity: 0.6;
+//   position: absolute;
+//   bottom: 0px;
+//   z-index: 999;
+//   display: none;
+// }
+// #victory {
+//   width: 100%; 
+//   height: 100%; 
+//   background: #CBEED8;
+//   opacity: 0.6;
+//   position: absolute;
+//   bottom: 0px;
+//   z-index: 999;
+//   display: none;
+// }
 #notice-overlay {
   background: transparent;
   color: #888;
