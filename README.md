@@ -9,7 +9,7 @@ angle: default 75, max angle of the shooter
 
 ### Turn Settings (the fun stuff!)
 
-**turnmax**: default 4, when counter reaches this it adds a new row, so lower the number is harder; 0 for infinite
+**turnmax**: default 0, when counter reaches this it adds a new row, so lower the number is harder; 0 for infinite
 
 **turnmin**: default 2, min number of turns before ceiling (random factory included)
 
@@ -17,9 +17,9 @@ angle: default 75, max angle of the shooter
 
 **turnaccel**: default 0.8, as you get more turns, row ceiling gets lower (not exponentially)
 
-**timermax**: default 0, seconds before new layer, 0 for infinite
+**timermax**: default 20, seconds before new layer, 0 for infinite
 
-**timermin**: default 5, mininum seconds before new layer
+**timermin**: default 3, mininum seconds before new layer
 
 **timeraccel**: default .9, as you get more turns your seconds drop (exponentially)
 
