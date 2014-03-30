@@ -256,18 +256,18 @@ $(document).ready ->
   else
     $("#timer-container").show()
     $("#addrowmeter").css("width", "100%")
-    $("#timer").text(ROW_COUNTER_INTERVAL)
+    $("#timer").text(ROW_COUNTER_INTERVAL).show()
     addRowCounterSecs = ROW_COUNTER_INTERVAL
     refresh = .1 # seconds
     window.addrow = setInterval (() ->
       if isPaused == false 
-        $("#timer").text(Math.ceil(addRowCounterSecs - 1*refresh))
+        $("#timer").text(Math.max(0, Math.floor(addRowCounterSecs)))
         $("#addrowmeter").css("width", (addRowCounterSecs-1*refresh)/ROW_COUNTER_INTERVAL*100 + "%")
-        addRowCounterSecs = addRowCounterSecs - 1*refresh
-        if addRowCounterSecs < 1
+        if addRowCounterSecs < 0
           addRow()
           numRowAdded++
-          addRowCounterSecs = ROW_COUNTER_INTERVAL * Math.pow(ROW_COUNTER_INTERVAL_ACCEL, numRowAdded)
+          addRowCounterSecs = Math.max(2, ROW_COUNTER_INTERVAL * Math.pow(ROW_COUNTER_INTERVAL_ACCEL, numRowAdded))
+        addRowCounterSecs = addRowCounterSecs - 1*refresh
     ), 1000 * refresh
 
   addRows(DEFAULT_ROWS)

@@ -1,3 +1,9 @@
+.gh-icon-link {
+  color: #AAA;
+  &:hover {
+    // color: #BBB;
+  }
+}
 .btn-pause {
   background-color: #EEE;
   // border-color: #;
@@ -32,7 +38,16 @@
     .progress-bar {
       box-shadow: 0 0 0 0;
       background-color: #DDD;
-      color: transparent;
+      position: relative;
+      // color: transparent;
+      #timer {
+        color: #888;
+        font-size: 18px;
+        line-height: 30px;
+        text-align: left;
+        position: absolute;
+        left: 5px;
+      }
     }
   }
 }
