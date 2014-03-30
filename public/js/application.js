@@ -708,6 +708,11 @@ jQuery.fn.putInMatrix = function(loc, pop) {
     if (sameColorLocs.length >= 3) {
       oldScore = parseInt($("#score").text());
       $("#score").text(oldScore + sameColorLocs.length);
+      if (oldScore + sameColorLocs.length > 999) {
+        $("#score-container").css("font-size", "32px");
+      } else if (oldScore + sameColorLocs.length > 9999) {
+        $("#score-container").css("font-size", "28px");
+      }
       drop(sameColorLocs, "fade", function() {
         var b, bonuspts, bonussec, furthest, i, l, loc_i, looseguys, n, newsec, r, topsChecked, wallcluster, _i, _len, _ref;
         topsChecked = [];
@@ -774,6 +779,11 @@ jQuery.fn.putInMatrix = function(loc, pop) {
         }
         oldScore = parseInt($("#score").text());
         $("#score").text(oldScore + looseguys.length + bonuspts);
+        if (oldScore + looseguys.length + bonuspts > 999) {
+          $("#score-container").css("font-size", "32px");
+        } else if (oldScore + looseguys.length + bonuspts > 9999) {
+          $("#score-container").css("font-size", "28px");
+        }
         drop(looseguys, "drop", function() {
           if (checkIfWon() === true) {
             return win();
