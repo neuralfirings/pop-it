@@ -1,3 +1,6 @@
+.gh-icon-link {
+  color: #AAA; }
+
 .btn-pause {
   background-color: #EEE;
   border: solid 3px #DDD;
@@ -29,7 +32,14 @@
     #timer-container .progress .progress-bar {
       box-shadow: 0 0 0 0;
       background-color: #DDD;
-      color: transparent; }
+      position: relative; }
+      #timer-container .progress .progress-bar #timer {
+        color: #888;
+        font-size: 18px;
+        line-height: 30px;
+        text-align: left;
+        position: absolute;
+        left: 5px; }
 
 #score-container {
   float: right;
