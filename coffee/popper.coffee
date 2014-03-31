@@ -11,15 +11,16 @@ SPEED = 20 # speed of the shooter
 MAX_ANGLE = 75 # max angle of the shooter
 
 ROW_TURNS_CEILING = 0 # when counter reaches this it adds a new row, so lower the number is harder; 0 for infinite
-ROW_TURNS_FLOOR = 2 # min number of turns before ceiling (random factory included)
-ROW_TURNS_RAND = 1 # as counter increments, it can increment 1-this number at random 
-ROW_TURNS_MULTIPLIER = 0.8 # as you get more turns, row ceiling gets lower (not exponentially)
+ROW_TURNS_FLOOR = 3 # min number of turns before ceiling (random factory included)
+ROW_TURNS_RAND = 2 # as counter increments, it can increment 1-this number at random 
+ROW_TURNS_MULTIPLIER = 0 # as you get more turns, row ceiling gets lower (not exponentially)
+
 ADDROW_TIMER_CEILING = 20  # seconds before new layer, 0 for infinite
-ADDROW_TIMER_MIN = 3  # mininum seconds before new layer
-ADDROW_TIMER_MULTIPLIER = .9  # as you get more turns your seconds drop (exponentially)
+ADDROW_TIMER_MIN = 5  # mininum seconds before new layer
+ADDROW_TIMER_MULTIPLIER = .95  # as you get more turns your seconds drop (exponentially)
 
 DROP_MULTIPLER = 1.2 # multiple of points you get when you drop bubbles
-DROP_TIME_MULTIPLER = 1 # dropped * this = extra seconds you get
+DROP_TIME_MULTIPLER = 2.5 # dropped * this = extra seconds you get
 
 # URL Params.. for easy play testing
 getUrlParam = (name) ->
