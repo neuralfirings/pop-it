@@ -1,8 +1,7 @@
 # Some constants
 # Do stuff with this so it's not so global later
-BUBBLE_BORDER = 5 # constant, I think
-BUBBLE_RADIUS = 25 # change to number of bubbles
-CONTAINER_BORDER = 5 # constant
+
+NUM_PER_ROW = 10 # Number of bubbles per row
 
 BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"] # should corrlate with CSS classes
 DEFAULT_ROWS = 3 # how many rows you start with
@@ -28,6 +27,8 @@ getUrlParam = (name) ->
   regex = new RegExp("[\\?&]" + name + "=([^&#]*)")
   results = regex.exec(location.search)
   (if not results? then "" else decodeURIComponent(results[1].replace(/\+/g, " ").replace(/\//g, '')))
+if getUrlParam("num") != ""
+  NUM_PER_ROW = parseFloat(getUrlParam("num"))
 if getUrlParam("maxrows") != ""
   MAX_ROW_NUM = parseFloat(getUrlParam("maxrows"))
 if getUrlParam("startrows") != ""
@@ -46,6 +47,7 @@ if getUrlParam("turnrand") != ""
   ROW_TURNS_RAND = parseFloat(getUrlParam("turnrand"))
 if getUrlParam("turnaccel") != ""
   ROW_TURNS_MULTIPLIER = parseFloat(getUrlParam("turnaccel"))
+
 if getUrlParam("timermax") != ""
   ADDROW_TIMER_CEILING = parseFloat(getUrlParam("timermax"))
 if getUrlParam("timermin") != ""
@@ -58,6 +60,10 @@ if getUrlParam("droppoints") != ""
 if getUrlParam("droptime") != ""
   DROP_TIME_MULTIPLER = parseFloat(getUrlParam("droptime"))
 
+# not so constant constants
+BUBBLE_BORDER = 5 # constant, I think
+BUBBLE_RADIUS = 25 # change to number of bubbles
+CONTAINER_BORDER = 5 # constant
 
 # starter values
 shooting = false 
@@ -104,7 +110,9 @@ $(document).ready ->
   startoverlay.append """
     <p>Clear the board.<br /><br />
     Connect 3 or more of the similar colors to POP them.<br /><br /> """ + rowcounterinfo + rowintervalinfo + """
-    <button class="btn btn-primary btn-large" id="startplaying">Start Playing</button></p>
+    <button class="btn btn-primary btn-large" id="startplaying">Start Playing</button><br />
+    <span style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" id="startmatch">start a match</a></span>
+    </p>
   """
   gameoverlay = $("<div id='gameover' class='overlay'></div>")
   gameoverlay.append "<p>Game Over <i class='fa fa-frown-o'></i></p>"
@@ -207,6 +215,8 @@ $(document).ready ->
   w = $("#popper-container").width()
   h = $("#popper-container").outerHeight() - BUBBLE_RADIUS * 2 - BUBBLE_BORDER * 2
   xNum = Math.floor(w / (BUBBLE_RADIUS * 2) - 0.5)
+  if (NUM_PER_ROW > 0)
+    xNum = NUM_PER_ROW
   yNum = Math.floor(h / (BUBBLE_RADIUS * 2) - 0.5) * 1.5 - 1
   margin = (w - (xNum + 0.5) * BUBBLE_RADIUS * 2) / 2
 
@@ -257,12 +267,6 @@ $(document).ready ->
     j++
 
   # Add Rows Mechanismmmmmmmmmm Timers, Counters, oh my!
-  # if ROW_TURNS_CEILING == 0
-  #   $("#rowcounter-container").hide()
-  # else
-  #   $("#rowcounter-container").show()
-  #   $("#rowcounter-info").text("New row every " + ROW_TURNS_CEILING/ROW_TURNS_RAND + " to " + ROW_TURNS_CEILING = " turns")
-
   if ADDROW_TIMER_CEILING == 0
     $("#timer-container").hide()
     addRowCounterSecs = 1
@@ -302,6 +306,9 @@ $(document).ready ->
     $("#startscreen").hide()
     unpause()
     $("#popper-container").css("cursor", "none")
+
+  $("#startmatch").click () ->
+    alert("firebase time!!")
 
 # return # end of document ready
 
@@ -604,24 +611,33 @@ drop = (locs, type, callback) ->
             { duration: 600, complete: () ->
               if callback != undefined
                 callback()
+              $(this).remove()
             }
           );
         else
           ldiv.animate(
             { bottom: target + "px"}, 
-            { duration: 600}
+            { duration: 600, complete: () ->
+              $(this).remove()
+            }
           );
 
       else
+        console.log i
         if i == locs.length-1
-          ldiv.fadeOut({duration: 150, complete: (i) ->
+          ldiv.fadeOut({duration: 150, complete: () ->
             if callback != undefined
               setTimeout (() ->
                 callback()
               ), 10
+            $(this).remove();
+            console.log "removing1", $(this)
           });
         else 
-          ldiv.fadeOut({duration: 150});
+          ldiv.fadeOut({duration: 150, complete: () ->
+            $(this).remove();
+            console.log "removing2", $(this)
+          });
       i++
   return
 

@@ -1,10 +1,6 @@
-var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, numRowAdded, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
+var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, numRowAdded, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
 
-BUBBLE_BORDER = 5;
-
-BUBBLE_RADIUS = 25;
-
-CONTAINER_BORDER = 5;
+NUM_PER_ROW = 10;
 
 BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"];
 
@@ -45,6 +41,10 @@ getUrlParam = function(name) {
     return decodeURIComponent(results[1].replace(/\+/g, " ").replace(/\//g, ''));
   }
 };
+
+if (getUrlParam("num") !== "") {
+  NUM_PER_ROW = parseFloat(getUrlParam("num"));
+}
 
 if (getUrlParam("maxrows") !== "") {
   MAX_ROW_NUM = parseFloat(getUrlParam("maxrows"));
@@ -97,6 +97,12 @@ if (getUrlParam("droppoints") !== "") {
 if (getUrlParam("droptime") !== "") {
   DROP_TIME_MULTIPLER = parseFloat(getUrlParam("droptime"));
 }
+
+BUBBLE_BORDER = 5;
+
+BUBBLE_RADIUS = 25;
+
+CONTAINER_BORDER = 5;
 
 shooting = false;
 
@@ -151,7 +157,7 @@ $(document).ready(function() {
     rowintervalinfo = "";
   }
   startoverlay = $("<div id='startscreen' class='overlay'></div>");
-  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br /> " + rowcounterinfo + rowintervalinfo + "<button class=\"btn btn-primary btn-large\" id=\"startplaying\">Start Playing</button></p>");
+  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br /> " + rowcounterinfo + rowintervalinfo + "<button class=\"btn btn-primary btn-large\" id=\"startplaying\">Start Playing</button><br />\n<span style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" id=\"startmatch\">start a match</a></span>\n</p>");
   gameoverlay = $("<div id='gameover' class='overlay'></div>");
   gameoverlay.append("<p>Game Over <i class='fa fa-frown-o'></i></p>");
   pauseoverlay = $("<div id='pause' class='overlay'></div>");
@@ -250,6 +256,9 @@ $(document).ready(function() {
   w = $("#popper-container").width();
   h = $("#popper-container").outerHeight() - BUBBLE_RADIUS * 2 - BUBBLE_BORDER * 2;
   xNum = Math.floor(w / (BUBBLE_RADIUS * 2) - 0.5);
+  if (NUM_PER_ROW > 0) {
+    xNum = NUM_PER_ROW;
+  }
   yNum = Math.floor(h / (BUBBLE_RADIUS * 2) - 0.5) * 1.5 - 1;
   margin = (w - (xNum + 0.5) * BUBBLE_RADIUS * 2) / 2;
   bubbleMatrixOne = [];
@@ -334,10 +343,13 @@ $(document).ready(function() {
       return $(this).text("Pause");
     }
   });
-  return $("#startplaying").click(function() {
+  $("#startplaying").click(function() {
     $("#startscreen").hide();
     unpause();
     return $("#popper-container").css("cursor", "none");
+  });
+  return $("#startmatch").click(function() {
+    return alert("firebase time!!");
   });
 });
 
@@ -702,32 +714,43 @@ drop = function(locs, type, callback) {
             duration: 600,
             complete: function() {
               if (callback !== void 0) {
-                return callback();
+                callback();
               }
+              return $(this).remove();
             }
           });
         } else {
           ldiv.animate({
             bottom: target + "px"
           }, {
-            duration: 600
+            duration: 600,
+            complete: function() {
+              return $(this).remove();
+            }
           });
         }
       } else {
+        console.log(i);
         if (i === locs.length - 1) {
           ldiv.fadeOut({
             duration: 150,
-            complete: function(i) {
+            complete: function() {
               if (callback !== void 0) {
-                return setTimeout((function() {
+                setTimeout((function() {
                   return callback();
                 }), 10);
               }
+              $(this).remove();
+              return console.log("removing1", $(this));
             }
           });
         } else {
           ldiv.fadeOut({
-            duration: 150
+            duration: 150,
+            complete: function() {
+              $(this).remove();
+              return console.log("removing2", $(this));
+            }
           });
         }
       }
