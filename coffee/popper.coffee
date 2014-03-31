@@ -77,6 +77,9 @@ bubbleMatrixTwo = [] # because of the hexagonal thing
 addRowCounter = 0 # starter value
 addRowCounterSecs = 1
 numRowAdded = 0
+isMultiPlayer = false
+screwQueue = []
+myPlayerNum = 0
 
 fb = new Firebase("https://pop-it.firebaseio.com/")
 user = ""
@@ -85,29 +88,67 @@ autoLogIn = true
 auth = new FirebaseSimpleLogin(fb, (e, u) ->
   if e
     console.log "Firebase error: " + e
+    # $("#startplaying").show()
+    # $("#startscreen").css("color", "#888") # show start screen
   else if u 
     user = u
     console.log "Anonymouse User " + u.id
-    $("#startscreen").css("color", "#888") # show start screen
     match_id = getUrlParam("m")
     if match_id != "" # game on
       match = fb.child("matches").child(match_id)
       match.on("value", (d) -> 
         if d.val() != null # Make sure it's not a ghost game
-          if d.val().player2 == undefined # waiting for second player
-            if d.val().player1 != user.id # and I am not second player
-              match.child("player2").set(user.id) # then I AM SECOND PLAYER!!!!
-              console.log "You are Player 2!"
-            else
+          if d.val().player1 != undefined and d.val().player1 == user.id # you are player 1
               console.log "You are Player 1!"
+              isMultiPlayer = true
+              $("#startplaying").text("Start Match") 
+              myPlayerNum = 1
+              opponentID = d.val().player2
+          else if d.val().player2 != undefined and d.val().player2 == user.id # you are player 2
+              console.log "You are Player 2!"
+              isMultiPlayer = true
+              $("#startplaying").text("Start Match")
+              myPlayerNum = 2
+              opponentID = d.val().player1
+          else if d.val().player2 == undefined # you are the NEW player 2
+              match.child("player2").set(user.id) 
+              isMultiPlayer = true
+              console.log "You are Player 2!"
+              $("#startplaying").text("Start Match")
+              myPlayerNum = 2
+              opponentID = d.val().player1
+        if isMultiPlayer == true
+          console.log "game on"
+          clearInterval(window.addrow)
+          $("#timer-container").hide()
+          $("#startscreen").find("#rowintervalinfo").hide()
+          $("#startscreen").find("#rowcounterinfo").hide()
+          ROW_TURNS_CEILING = 0
+          ADDROW_TIMER_CEILING = 0
+
+          sqdiv = $("<div class='screwqueue-container'><div>Send when full</div></div>")
+          i = 0
+          while i < NUM_PER_ROW
+            sqdiv.append "<div class='screwqueue-ball screwqueue-" + i + "'></div>"
+            i++
+          $("#popper-container").append sqdiv
+
+          opponentBoard = fb.child("players").child(opponentID).child("boardchange")
+          opponentBoard.child("addrow").on("child_added", (d) ->
+            addRow(d.val(), "Your 'friend' sent you a row")
+          )
       );
+    $("#startscreen").css("color", "#888") # show start screen
   else 
     if autoLogIn
       console.log "Getting id..."
       auth.login('anonymous', {
         rememberMe: true
       });
+    $("#startscreen").css("color", "#888") # show start screen
+  $("#startplaying").show()
 )
+
 
 $(document).ready ->
 
@@ -125,7 +166,7 @@ $(document).ready ->
       minCtr = Math.ceil(ROW_TURNS_CEILING/ROW_TURNS_RAND) + " to " 
     else
       minCtr = ""
-    rowcounterinfo = "New row every " + minCtr + ROW_TURNS_CEILING + " turns" + fornow + ".<br><br>"
+    rowcounterinfo = "<span id='rowcounterinfo'>New row every " + minCtr + ROW_TURNS_CEILING + " turns" + fornow + ".<br><br></span>"
   else
     rowcounterinfo = ""
 
@@ -134,14 +175,14 @@ $(document).ready ->
       fornow = "<br>...for now"
     else 
       fornow = ""
-    rowintervalinfo = "New row every " + ADDROW_TIMER_CEILING + " secs" + fornow + ".<br><br>"
+    rowintervalinfo = "<span id='rowintervalinfo'>New row every " + ADDROW_TIMER_CEILING + " secs" + fornow + ".<br><br></span>"
   else
     rowintervalinfo = ""
   startoverlay = $("<div id='startscreen' class='overlay' style='color: transparent'></div>")
   startoverlay.append """
     <p>Clear the board.<br /><br />
     Connect 3 or more of the similar colors to POP them.<br /><br /> """ + rowcounterinfo + rowintervalinfo + """
-    <button class="btn btn-primary btn-large" id="startplaying">Start Playing</button><br />
+    <button class="btn btn-primary btn-large" id="startplaying" style="display:none">Start Playing</button><br />
     <span id="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" id="startmatch">start a match</a></span>
     </p>
   """
@@ -297,7 +338,7 @@ $(document).ready ->
       i++
     j++
 
-  # Add Rows Mechanismmmmmmmmmm Timers, Counters, oh my!
+  # Add Row by Timer
   if ADDROW_TIMER_CEILING == 0
     $("#timer-container").hide()
     addRowCounterSecs = 1
@@ -457,7 +498,7 @@ addRows = (n) ->
     addRow()
     i++
 
-addRow = (colors) ->
+addRow = (colors, flash) ->
 
   scoochAllDown()
   # toggleMatrixPosition()
@@ -484,6 +525,8 @@ addRow = (colors) ->
     div.hide().fadeIn({duration: 200})
     num++
 
+  if flash != undefined 
+    noticeFlash(flash)
 
 scoochAllDown = (n) ->
   furthestRow = 0
@@ -749,6 +792,21 @@ addToScore = (deltaScore) ->
     $("#score").text(newScore)
     $("#score-container").css("font-size", "28px")
 
+addToScrewQueue = (locs) ->
+  for l in locs
+    color = bubbleMatrix[l.row][l.num].color
+    screwQueue.push color
+    $(".screwqueue-" + (screwQueue.length - 1)).addClass("popper-" + color)
+
+    if screwQueue.length == 10
+      fb.child("players").child(user.id).child("boardchange").child("addrow").push(screwQueue)
+      screwQueue = []
+      for c in BUBBLE_OPTIONS
+        $(".screwqueue-ball").removeClass("popper-" + c)
+
+    $("#screwqueue-length").text(screwQueue.length)
+
+
 ############################################################
 ### jQuery add ons, mostly relatied to shooting a bubble ###
 ############################################################
@@ -778,14 +836,7 @@ jQuery.fn.putInMatrix = (loc, pop) ->
     deltaScore = 0
     sameColorLocs = checkCluster(loc, true)
     if sameColorLocs.length >= 3
-      # calc same color score
-      # oldScore = parseInt($("#score").text())
       addToScore(sameColorLocs.length)
-      # $("#score").text(oldScore + sameColorLocs.length)
-      # if oldScore + sameColorLocs.length > 999
-      #   $("#score-container").css("font-size", "32px")
-      # else if oldScore + sameColorLocs.length > 9999
-      #   $("#score-container").css("font-size", "28px")
 
       drop(sameColorLocs, "fade", () ->
         # code to drop loose bubbles
@@ -842,12 +893,8 @@ jQuery.fn.putInMatrix = (loc, pop) ->
           bonuspts = 0
 
         addToScore(looseguys.length + bonuspts)
-        # oldScore = parseInt($("#score").text())
-        # $("#score").text(oldScore + looseguys.length + bonuspts) # do something fancier here
-        # if oldScore + looseguys.length + bonuspts > 999
-        #   $("#score-container").css("font-size", "32px")
-        # else if oldScore + looseguys.length + bonuspts > 9999
-        #   $("#score-container").css("font-size", "28px")
+        if isMultiPlayer
+          addToScrewQueue(looseguys)
 
         # drop it like it's hot
         drop(looseguys, "drop", () ->
@@ -865,10 +912,6 @@ jQuery.fn.putInMatrix = (loc, pop) ->
         div.css("background-color", "#DDD").css("border-color", "#BBB")
         div.putInMatrix prevMatrixLoc
 
-    # if sameColorLocs.length >= 3
-    #   deltaScore += sameColorLocs.length
-    # oldScore = parseInt($("#score").text())
-    # $("#score").text(oldScore + deltaScore) # do something fancier here
   shooting = false 
   return
 

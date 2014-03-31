@@ -1,4 +1,4 @@
-var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isLoggedIn, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, numRowAdded, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
+var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, addToScrewQueue, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isLoggedIn, isMatrixLocEmpty, isMultiPlayer, isPaused, isWon, lookAround, moveBubble, myPlayerNum, noticeFlash, numRowAdded, pause, scoochAllDown, screwQueue, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
 
 NUM_PER_ROW = 10;
 
@@ -126,6 +126,12 @@ addRowCounterSecs = 1;
 
 numRowAdded = 0;
 
+isMultiPlayer = false;
+
+screwQueue = [];
+
+myPlayerNum = 0;
+
 fb = new Firebase("https://pop-it.firebaseio.com/");
 
 user = "";
@@ -137,35 +143,70 @@ autoLogIn = true;
 auth = new FirebaseSimpleLogin(fb, function(e, u) {
   var match, match_id;
   if (e) {
-    return console.log("Firebase error: " + e);
+    console.log("Firebase error: " + e);
   } else if (u) {
     user = u;
     console.log("Anonymouse User " + u.id);
-    $("#startscreen").css("color", "#888");
     match_id = getUrlParam("m");
     if (match_id !== "") {
       match = fb.child("matches").child(match_id);
-      return match.on("value", function(d) {
+      match.on("value", function(d) {
+        var i, opponentBoard, opponentID, sqdiv;
         if (d.val() !== null) {
-          if (d.val().player2 === void 0) {
-            if (d.val().player1 !== user.id) {
-              match.child("player2").set(user.id);
-              return console.log("You are Player 2!");
-            } else {
-              return console.log("You are Player 1!");
-            }
+          if (d.val().player1 !== void 0 && d.val().player1 === user.id) {
+            console.log("You are Player 1!");
+            isMultiPlayer = true;
+            $("#startplaying").text("Start Match");
+            myPlayerNum = 1;
+            opponentID = d.val().player2;
+          } else if (d.val().player2 !== void 0 && d.val().player2 === user.id) {
+            console.log("You are Player 2!");
+            isMultiPlayer = true;
+            $("#startplaying").text("Start Match");
+            myPlayerNum = 2;
+            opponentID = d.val().player1;
+          } else if (d.val().player2 === void 0) {
+            match.child("player2").set(user.id);
+            isMultiPlayer = true;
+            console.log("You are Player 2!");
+            $("#startplaying").text("Start Match");
+            myPlayerNum = 2;
+            opponentID = d.val().player1;
           }
+        }
+        if (isMultiPlayer === true) {
+          console.log("game on");
+          clearInterval(window.addrow);
+          $("#timer-container").hide();
+          $("#startscreen").find("#rowintervalinfo").hide();
+          $("#startscreen").find("#rowcounterinfo").hide();
+          ROW_TURNS_CEILING = 0;
+          ADDROW_TIMER_CEILING = 0;
+          sqdiv = $("<div class='screwqueue-container'><div>Send when full</div></div>");
+          i = 0;
+          while (i < NUM_PER_ROW) {
+            sqdiv.append("<div class='screwqueue-ball screwqueue-" + i + "'></div>");
+            i++;
+          }
+          $("#popper-container").append(sqdiv);
+          opponentBoard = fb.child("players").child(opponentID).child("boardchange");
+          return opponentBoard.child("addrow").on("child_added", function(d) {
+            return addRow(d.val(), "Your 'friend' sent you a row");
+          });
         }
       });
     }
+    $("#startscreen").css("color", "#888");
   } else {
     if (autoLogIn) {
       console.log("Getting id...");
-      return auth.login('anonymous', {
+      auth.login('anonymous', {
         rememberMe: true
       });
     }
+    $("#startscreen").css("color", "#888");
   }
+  return $("#startplaying").show();
 });
 
 $(document).ready(function() {
@@ -184,7 +225,7 @@ $(document).ready(function() {
     } else {
       minCtr = "";
     }
-    rowcounterinfo = "New row every " + minCtr + ROW_TURNS_CEILING + " turns" + fornow + ".<br><br>";
+    rowcounterinfo = "<span id='rowcounterinfo'>New row every " + minCtr + ROW_TURNS_CEILING + " turns" + fornow + ".<br><br></span>";
   } else {
     rowcounterinfo = "";
   }
@@ -194,12 +235,12 @@ $(document).ready(function() {
     } else {
       fornow = "";
     }
-    rowintervalinfo = "New row every " + ADDROW_TIMER_CEILING + " secs" + fornow + ".<br><br>";
+    rowintervalinfo = "<span id='rowintervalinfo'>New row every " + ADDROW_TIMER_CEILING + " secs" + fornow + ".<br><br></span>";
   } else {
     rowintervalinfo = "";
   }
   startoverlay = $("<div id='startscreen' class='overlay' style='color: transparent'></div>");
-  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br /> " + rowcounterinfo + rowintervalinfo + "<button class=\"btn btn-primary btn-large\" id=\"startplaying\">Start Playing</button><br />\n<span id=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" id=\"startmatch\">start a match</a></span>\n</p>");
+  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br /> " + rowcounterinfo + rowintervalinfo + "<button class=\"btn btn-primary btn-large\" id=\"startplaying\" style=\"display:none\">Start Playing</button><br />\n<span id=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" id=\"startmatch\">start a match</a></span>\n</p>");
   gameoverlay = $("<div id='gameover' class='overlay'></div>");
   gameoverlay.append("<p>Game Over <i class='fa fa-frown-o'></i></p>");
   pauseoverlay = $("<div id='pause' class='overlay'></div>");
@@ -510,8 +551,8 @@ addRows = function(n) {
   return _results;
 };
 
-addRow = function(colors) {
-  var color, div, i, loc, num, rand, _i, _j, _len, _len1, _ref, _results;
+addRow = function(colors, flash) {
+  var color, div, i, loc, num, rand, _i, _j, _len, _len1, _ref;
   scoochAllDown();
   if (colors === void 0) {
     colors = [];
@@ -530,7 +571,6 @@ addRow = function(colors) {
     }
   }
   num = 0;
-  _results = [];
   for (_j = 0, _len1 = colors.length; _j < _len1; _j++) {
     color = colors[_j];
     div = $("#popper-container").createBubble(color).addClass("popper-" + color).text('0,' + num);
@@ -542,9 +582,11 @@ addRow = function(colors) {
     div.hide().fadeIn({
       duration: 200
     });
-    _results.push(num++);
+    num++;
   }
-  return _results;
+  if (flash !== void 0) {
+    return noticeFlash(flash);
+  }
 };
 
 scoochAllDown = function(n) {
@@ -887,6 +929,27 @@ addToScore = function(deltaScore) {
   }
 };
 
+addToScrewQueue = function(locs) {
+  var c, color, l, _i, _j, _len, _len1, _results;
+  _results = [];
+  for (_i = 0, _len = locs.length; _i < _len; _i++) {
+    l = locs[_i];
+    color = bubbleMatrix[l.row][l.num].color;
+    screwQueue.push(color);
+    $(".screwqueue-" + (screwQueue.length - 1)).addClass("popper-" + color);
+    if (screwQueue.length === 10) {
+      fb.child("players").child(user.id).child("boardchange").child("addrow").push(screwQueue);
+      screwQueue = [];
+      for (_j = 0, _len1 = BUBBLE_OPTIONS.length; _j < _len1; _j++) {
+        c = BUBBLE_OPTIONS[_j];
+        $(".screwqueue-ball").removeClass("popper-" + c);
+      }
+    }
+    _results.push($("#screwqueue-length").text(screwQueue.length));
+  }
+  return _results;
+};
+
 
 /* jQuery add ons, mostly relatied to shooting a bubble */
 
@@ -984,6 +1047,9 @@ jQuery.fn.putInMatrix = function(loc, pop) {
           bonuspts = 0;
         }
         addToScore(looseguys.length + bonuspts);
+        if (isMultiPlayer) {
+          addToScrewQueue(looseguys);
+        }
         drop(looseguys, "drop", function() {
           if (checkIfWon() === true) {
             return win();
