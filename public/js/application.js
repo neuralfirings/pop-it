@@ -158,7 +158,13 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
             isMultiPlayer = true;
             $("#startplaying").text("Start Match");
             myPlayerNum = 1;
-            opponentID = d.val().player2;
+            if (d.val().player2 === void 0) {
+              console.log("waiting for your opponent");
+              $("#startplaying").addClass("disabled").text("waiting for opponent");
+            } else {
+              opponentID = d.val().player2;
+              $("#startplaying").removeClass("disabled").text("Start Match");
+            }
           } else if (d.val().player2 !== void 0 && d.val().player2 === user.id) {
             console.log("You are Player 2!");
             isMultiPlayer = true;
@@ -189,10 +195,13 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
             i++;
           }
           $("#popper-container").append(sqdiv);
-          opponentBoard = fb.child("players").child(opponentID).child("boardchange");
-          return opponentBoard.child("addrow").on("child_added", function(d) {
-            return addRow(d.val(), "Your 'friend' sent you a row");
-          });
+          if (!$("#startplaying").hasClass("disabled")) {
+            opponentBoard = fb.child("players").child(opponentID).child(match_id).child("boardchange");
+            return opponentBoard.child("addrow").on("child_added", function(d) {
+              addRow(d.val(), "Your 'friend' sent you a gift");
+              return console.log("Your friend sent you a gift", opponentID);
+            });
+          }
         }
       });
     }
@@ -929,12 +938,16 @@ addToScore = function(deltaScore) {
   }
 };
 
-addToScrewQueue = function(locs) {
-  var c, color, l, _i, _j, _len, _len1, _results;
+addToScrewQueue = function(arr, type) {
+  var c, color, i, _i, _j, _len, _len1, _results;
   _results = [];
-  for (_i = 0, _len = locs.length; _i < _len; _i++) {
-    l = locs[_i];
-    color = bubbleMatrix[l.row][l.num].color;
+  for (_i = 0, _len = arr.length; _i < _len; _i++) {
+    i = arr[_i];
+    if (type === "locs") {
+      color = bubbleMatrix[i.row][i.num].color;
+    } else if (type === "colors") {
+      color = i;
+    }
     screwQueue.push(color);
     $(".screwqueue-" + (screwQueue.length - 1)).addClass("popper-" + color);
     if (screwQueue.length === 10) {
@@ -965,7 +978,7 @@ jQuery.fn.createBubble = function(color) {
 };
 
 jQuery.fn.putInMatrix = function(loc, pop) {
-  var coords, deltaScore, div, sameColorLocs;
+  var c, coords, deltaScore, div, i, numToAdd, rand, sameColorLocs, screwColors;
   if (pop === void 0) {
     pop = true;
   }
@@ -982,8 +995,21 @@ jQuery.fn.putInMatrix = function(loc, pop) {
     sameColorLocs = checkCluster(loc, true);
     if (sameColorLocs.length >= 3) {
       addToScore(sameColorLocs.length);
+      if (isMultiPlayer) {
+        numToAdd = Math.floor(sameColorLocs.length / 2);
+        i = 0;
+        screwColors = [];
+        while (i < numToAdd) {
+          i++;
+          rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
+          c = BUBBLE_OPTIONS[rand];
+          console.log(c);
+          screwColors.push(c);
+        }
+        addToScrewQueue(screwColors, "colors");
+      }
       drop(sameColorLocs, "fade", function() {
-        var b, bonuspts, bonussec, furthest, i, l, loc_i, looseguys, n, newsec, r, topsChecked, wallcluster, _i, _len, _ref;
+        var b, bonuspts, bonussec, furthest, l, loc_i, looseguys, n, newsec, r, topsChecked, wallcluster, _i, _len, _ref;
         topsChecked = [];
         i = 0;
         _ref = bubbleMatrix[0];
@@ -1048,7 +1074,7 @@ jQuery.fn.putInMatrix = function(loc, pop) {
         }
         addToScore(looseguys.length + bonuspts);
         if (isMultiPlayer) {
-          addToScrewQueue(looseguys);
+          addToScrewQueue(looseguys, "locs");
         }
         drop(looseguys, "drop", function() {
           if (checkIfWon() === true) {
