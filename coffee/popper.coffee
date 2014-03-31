@@ -1,8 +1,7 @@
 # Some constants
 # Do stuff with this so it's not so global later
-BUBBLE_BORDER = 5 # constant, I think
-BUBBLE_RADIUS = 25 # change to number of bubbles
-CONTAINER_BORDER = 5 # constant
+
+NUM_PER_ROW = 10 # Number of bubbles per row
 
 BUBBLE_OPTIONS = ["red", "green", "yellow", "blue"] # should corrlate with CSS classes
 DEFAULT_ROWS = 3 # how many rows you start with
@@ -11,12 +10,12 @@ MAX_ROW_NUM = 10 # after this it's game over sadface
 SPEED = 20 # speed of the shooter
 MAX_ANGLE = 75 # max angle of the shooter
 
-ROW_TURNS_CEILING = 4 # when counter reaches this it adds a new row, so lower the number is harder; 0 for infinite
+ROW_TURNS_CEILING = 0 # when counter reaches this it adds a new row, so lower the number is harder; 0 for infinite
 ROW_TURNS_FLOOR = 2 # min number of turns before ceiling (random factory included)
 ROW_TURNS_RAND = 1 # as counter increments, it can increment 1-this number at random 
 ROW_TURNS_MULTIPLIER = 0.8 # as you get more turns, row ceiling gets lower (not exponentially)
-ADDROW_TIMER_CEILING = 0  # seconds before new layer, 0 for infinite
-ADDROW_TIMER_MIN = 5  # mininum seconds before new layer
+ADDROW_TIMER_CEILING = 20  # seconds before new layer, 0 for infinite
+ADDROW_TIMER_MIN = 3  # mininum seconds before new layer
 ADDROW_TIMER_MULTIPLIER = .9  # as you get more turns your seconds drop (exponentially)
 
 DROP_MULTIPLER = 1.2 # multiple of points you get when you drop bubbles
@@ -28,6 +27,8 @@ getUrlParam = (name) ->
   regex = new RegExp("[\\?&]" + name + "=([^&#]*)")
   results = regex.exec(location.search)
   (if not results? then "" else decodeURIComponent(results[1].replace(/\+/g, " ").replace(/\//g, '')))
+if getUrlParam("num") != ""
+  NUM_PER_ROW = parseFloat(getUrlParam("num"))
 if getUrlParam("maxrows") != ""
   MAX_ROW_NUM = parseFloat(getUrlParam("maxrows"))
 if getUrlParam("startrows") != ""
@@ -46,6 +47,7 @@ if getUrlParam("turnrand") != ""
   ROW_TURNS_RAND = parseFloat(getUrlParam("turnrand"))
 if getUrlParam("turnaccel") != ""
   ROW_TURNS_MULTIPLIER = parseFloat(getUrlParam("turnaccel"))
+
 if getUrlParam("timermax") != ""
   ADDROW_TIMER_CEILING = parseFloat(getUrlParam("timermax"))
 if getUrlParam("timermin") != ""
@@ -58,6 +60,10 @@ if getUrlParam("droppoints") != ""
 if getUrlParam("droptime") != ""
   DROP_TIME_MULTIPLER = parseFloat(getUrlParam("droptime"))
 
+# not so constant constants
+BUBBLE_BORDER = 5 # constant, I think
+BUBBLE_RADIUS = 25 # change to number of bubbles
+CONTAINER_BORDER = 5 # constant
 
 # starter values
 shooting = false 
@@ -71,6 +77,25 @@ bubbleMatrixTwo = [] # because of the hexagonal thing
 addRowCounter = 0 # starter value
 addRowCounterSecs = 1
 numRowAdded = 0
+
+fb = new Firebase("https://pop-it.firebaseio.com/")
+user = ""
+isLoggedIn = false
+autoLogIn = true
+auth = new FirebaseSimpleLogin(fb, (e, u) ->
+  if e
+    console.log "Firebase error: " + e
+  else if u 
+    user = u
+    console.log "Anonymouse User " + u.id
+    $("#startscreen").css("color", "#888")
+  else 
+    if autoLogIn
+      console.log "Getting id..."
+      auth.login('anonymous', {
+        rememberMe: true
+      });
+)
 
 $(document).ready ->
 
@@ -100,11 +125,13 @@ $(document).ready ->
     rowintervalinfo = "New row every " + ADDROW_TIMER_CEILING + " secs" + fornow + ".<br><br>"
   else
     rowintervalinfo = ""
-  startoverlay = $("<div id='startscreen' class='overlay'></div>")
+  startoverlay = $("<div id='startscreen' class='overlay' style='color: transparent'></div>")
   startoverlay.append """
     <p>Clear the board.<br /><br />
     Connect 3 or more of the similar colors to POP them.<br /><br /> """ + rowcounterinfo + rowintervalinfo + """
-    <button class="btn btn-primary btn-large" id="startplaying">Start Playing</button></p>
+    <button class="btn btn-primary btn-large" id="startplaying">Start Playing</button><br />
+    <span id="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" id="startmatch">start a match</a></span>
+    </p>
   """
   gameoverlay = $("<div id='gameover' class='overlay'></div>")
   gameoverlay.append "<p>Game Over <i class='fa fa-frown-o'></i></p>"
@@ -207,6 +234,8 @@ $(document).ready ->
   w = $("#popper-container").width()
   h = $("#popper-container").outerHeight() - BUBBLE_RADIUS * 2 - BUBBLE_BORDER * 2
   xNum = Math.floor(w / (BUBBLE_RADIUS * 2) - 0.5)
+  if (NUM_PER_ROW > 0)
+    xNum = NUM_PER_ROW
   yNum = Math.floor(h / (BUBBLE_RADIUS * 2) - 0.5) * 1.5 - 1
   margin = (w - (xNum + 0.5) * BUBBLE_RADIUS * 2) / 2
 
@@ -257,12 +286,6 @@ $(document).ready ->
     j++
 
   # Add Rows Mechanismmmmmmmmmm Timers, Counters, oh my!
-  # if ROW_TURNS_CEILING == 0
-  #   $("#rowcounter-container").hide()
-  # else
-  #   $("#rowcounter-container").show()
-  #   $("#rowcounter-info").text("New row every " + ROW_TURNS_CEILING/ROW_TURNS_RAND + " to " + ROW_TURNS_CEILING = " turns")
-
   if ADDROW_TIMER_CEILING == 0
     $("#timer-container").hide()
     addRowCounterSecs = 1
@@ -302,6 +325,26 @@ $(document).ready ->
     $("#startscreen").hide()
     unpause()
     $("#popper-container").css("cursor", "none")
+
+  $("#startmatch").click () ->
+    newMatch = fb.child("matches").push()
+    fb.child("matches").child(newMatch.name()).child("created_on").set(Firebase.ServerValue.TIMESTAMP)
+    fb.child("matches").child(newMatch.name()).child("player1").set(user.id)
+    mdb_myactions =  fb.child("players").child(user.id).push()
+    fb.child("players").child(user.id).child(mdb_myactions.name()).set( {
+        name: "nancy", 
+        points: 0, 
+        boardchange: { 
+          add: "", 
+          addrow: "", 
+          pop: "", 
+          currmatrix: "one"
+        }, 
+        send: "" 
+      }
+    )
+    # alert("firebase time!! " + newMatch.name())
+    $("#startscreen").find("span").append("<br />link to match: <input type='text' value='" + window.location.origin + "/?m=" + newMatch.name() + "' />")
 
 # return # end of document ready
 
@@ -604,24 +647,33 @@ drop = (locs, type, callback) ->
             { duration: 600, complete: () ->
               if callback != undefined
                 callback()
+              $(this).remove()
             }
           );
         else
           ldiv.animate(
             { bottom: target + "px"}, 
-            { duration: 600}
+            { duration: 600, complete: () ->
+              $(this).remove()
+            }
           );
 
       else
+        console.log i
         if i == locs.length-1
-          ldiv.fadeOut({duration: 150, complete: (i) ->
+          ldiv.fadeOut({duration: 150, complete: () ->
             if callback != undefined
               setTimeout (() ->
                 callback()
               ), 10
+            $(this).remove();
+            console.log "removing1", $(this)
           });
         else 
-          ldiv.fadeOut({duration: 150});
+          ldiv.fadeOut({duration: 150, complete: () ->
+            $(this).remove();
+            console.log "removing2", $(this)
+          });
       i++
   return
 
@@ -764,7 +816,7 @@ jQuery.fn.putInMatrix = (loc, pop) ->
           r++
 
         # bonus time for dropping
-        if looseguys.length >1
+        if looseguys.length > 0
           bonussec = Math.round(looseguys.length * DROP_TIME_MULTIPLER)
           newsec = addRowCounterSecs + bonussec
           newsec = Math.min(newsec, ADDROW_TIMER_CEILING)
