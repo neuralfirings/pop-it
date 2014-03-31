@@ -104,7 +104,12 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
               isMultiPlayer = true
               $("#startplaying").text("Start Match") 
               myPlayerNum = 1
-              opponentID = d.val().player2
+              if d.val().player2 == undefined
+                console.log "waiting for your opponent"
+                $("#startplaying").addClass("disabled").text("waiting for opponent")
+              else
+                opponentID = d.val().player2
+                $("#startplaying").removeClass("disabled").text("Start Match")
           else if d.val().player2 != undefined and d.val().player2 == user.id # you are player 2
               console.log "You are Player 2!"
               isMultiPlayer = true
@@ -134,10 +139,12 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
             i++
           $("#popper-container").append sqdiv
 
-          opponentBoard = fb.child("players").child(opponentID).child("boardchange")
-          opponentBoard.child("addrow").on("child_added", (d) ->
-            addRow(d.val(), "Your 'friend' sent you a row")
-          )
+          if !$("#startplaying").hasClass("disabled")
+            opponentBoard = fb.child("players").child(opponentID).child(match_id).child("boardchange")
+            opponentBoard.child("addrow").on("child_added", (d) ->
+              addRow(d.val(), "Your 'friend' sent you a gift")
+              console.log "Your friend sent you a gift", opponentID
+            )
       );
     $("#startscreen").css("color", "#888") # show start screen
   else 
@@ -793,9 +800,14 @@ addToScore = (deltaScore) ->
     $("#score").text(newScore)
     $("#score-container").css("font-size", "28px")
 
-addToScrewQueue = (locs) ->
-  for l in locs
-    color = bubbleMatrix[l.row][l.num].color
+addToScrewQueue = (arr, type) ->
+  for i in arr
+
+    if type == "locs"
+      color = bubbleMatrix[i.row][i.num].color
+    else if type == "colors"
+      color = i
+
     screwQueue.push color
     $(".screwqueue-" + (screwQueue.length - 1)).addClass("popper-" + color)
 
@@ -806,6 +818,7 @@ addToScrewQueue = (locs) ->
         $(".screwqueue-ball").removeClass("popper-" + c)
 
     $("#screwqueue-length").text(screwQueue.length)
+
 
 
 ############################################################
@@ -838,6 +851,17 @@ jQuery.fn.putInMatrix = (loc, pop) ->
     sameColorLocs = checkCluster(loc, true)
     if sameColorLocs.length >= 3
       addToScore(sameColorLocs.length)
+      if isMultiPlayer
+        numToAdd = Math.floor(sameColorLocs.length/2)
+        i = 0
+        screwColors = []
+        while i < numToAdd
+          i++
+          rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
+          c = BUBBLE_OPTIONS[rand]
+          console.log c
+          screwColors.push c
+        addToScrewQueue(screwColors, "colors")
 
       drop(sameColorLocs, "fade", () ->
         # code to drop loose bubbles
@@ -895,7 +919,7 @@ jQuery.fn.putInMatrix = (loc, pop) ->
 
         addToScore(looseguys.length + bonuspts)
         if isMultiPlayer
-          addToScrewQueue(looseguys)
+          addToScrewQueue(looseguys, "locs")
 
         # drop it like it's hot
         drop(looseguys, "drop", () ->
