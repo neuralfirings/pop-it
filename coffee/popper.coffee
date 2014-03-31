@@ -78,6 +78,25 @@ addRowCounter = 0 # starter value
 addRowCounterSecs = 1
 numRowAdded = 0
 
+fb = new Firebase("https://pop-it.firebaseio.com/")
+user = ""
+isLoggedIn = false
+autoLogIn = true
+auth = new FirebaseSimpleLogin(fb, (e, u) ->
+  if e
+    console.log "Firebase error: " + e
+  else if u 
+    user = u
+    console.log "Anonymouse User " + u.id
+    $("#startscreen").css("color", "#888")
+  else 
+    if autoLogIn
+      console.log "Getting id..."
+      auth.login('anonymous', {
+        rememberMe: true
+      });
+)
+
 $(document).ready ->
 
   shooter = $("<div class='popper-shooter'></div>")
@@ -106,12 +125,12 @@ $(document).ready ->
     rowintervalinfo = "New row every " + ADDROW_TIMER_CEILING + " secs" + fornow + ".<br><br>"
   else
     rowintervalinfo = ""
-  startoverlay = $("<div id='startscreen' class='overlay'></div>")
+  startoverlay = $("<div id='startscreen' class='overlay' style='color: transparent'></div>")
   startoverlay.append """
     <p>Clear the board.<br /><br />
     Connect 3 or more of the similar colors to POP them.<br /><br /> """ + rowcounterinfo + rowintervalinfo + """
     <button class="btn btn-primary btn-large" id="startplaying">Start Playing</button><br />
-    <span style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" id="startmatch">start a match</a></span>
+    <span id="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" id="startmatch">start a match</a></span>
     </p>
   """
   gameoverlay = $("<div id='gameover' class='overlay'></div>")
@@ -308,7 +327,24 @@ $(document).ready ->
     $("#popper-container").css("cursor", "none")
 
   $("#startmatch").click () ->
-    alert("firebase time!!")
+    newMatch = fb.child("matches").push()
+    fb.child("matches").child(newMatch.name()).child("created_on").set(Firebase.ServerValue.TIMESTAMP)
+    fb.child("matches").child(newMatch.name()).child("player1").set(user.id)
+    mdb_myactions =  fb.child("players").child(user.id).push()
+    fb.child("players").child(user.id).child(mdb_myactions.name()).set( {
+        name: "nancy", 
+        points: 0, 
+        boardchange: { 
+          add: "", 
+          addrow: "", 
+          pop: "", 
+          currmatrix: "one"
+        }, 
+        send: "" 
+      }
+    )
+    # alert("firebase time!! " + newMatch.name())
+    $("#startscreen").find("span").append("<br />link to match: <input type='text' value='" + window.location.origin + "/?m=" + newMatch.name() + "' />")
 
 # return # end of document ready
 
@@ -780,7 +816,7 @@ jQuery.fn.putInMatrix = (loc, pop) ->
           r++
 
         # bonus time for dropping
-        if looseguys.length >1
+        if looseguys.length > 0
           bonussec = Math.round(looseguys.length * DROP_TIME_MULTIPLER)
           newsec = addRowCounterSecs + bonussec
           newsec = Math.min(newsec, ADDROW_TIMER_CEILING)

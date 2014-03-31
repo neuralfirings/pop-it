@@ -1,4 +1,4 @@
-var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, numRowAdded, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, win;
+var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isLoggedIn, isMatrixLocEmpty, isPaused, isWon, lookAround, moveBubble, noticeFlash, numRowAdded, pause, scoochAllDown, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
 
 NUM_PER_ROW = 10;
 
@@ -126,6 +126,31 @@ addRowCounterSecs = 1;
 
 numRowAdded = 0;
 
+fb = new Firebase("https://pop-it.firebaseio.com/");
+
+user = "";
+
+isLoggedIn = false;
+
+autoLogIn = true;
+
+auth = new FirebaseSimpleLogin(fb, function(e, u) {
+  if (e) {
+    return console.log("Firebase error: " + e);
+  } else if (u) {
+    user = u;
+    console.log("Anonymouse User " + u.id);
+    return $("#startscreen").css("color", "#888");
+  } else {
+    if (autoLogIn) {
+      console.log("Getting id...");
+      return auth.login('anonymous', {
+        rememberMe: true
+      });
+    }
+  }
+});
+
 $(document).ready(function() {
   var currColor, currColorClass, fornow, gameoverlay, h, i, j, margin, minCtr, noticeoverlay, pauseoverlay, rand, refresh, rowcounterinfo, rowintervalinfo, shooter, shooterbase, shootercontrol, shooteroverlay, startoverlay, w, winoverlay, x, xNum, y, yNum;
   shooter = $("<div class='popper-shooter'></div>");
@@ -156,8 +181,8 @@ $(document).ready(function() {
   } else {
     rowintervalinfo = "";
   }
-  startoverlay = $("<div id='startscreen' class='overlay'></div>");
-  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br /> " + rowcounterinfo + rowintervalinfo + "<button class=\"btn btn-primary btn-large\" id=\"startplaying\">Start Playing</button><br />\n<span style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" id=\"startmatch\">start a match</a></span>\n</p>");
+  startoverlay = $("<div id='startscreen' class='overlay' style='color: transparent'></div>");
+  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br /> " + rowcounterinfo + rowintervalinfo + "<button class=\"btn btn-primary btn-large\" id=\"startplaying\">Start Playing</button><br />\n<span id=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" id=\"startmatch\">start a match</a></span>\n</p>");
   gameoverlay = $("<div id='gameover' class='overlay'></div>");
   gameoverlay.append("<p>Game Over <i class='fa fa-frown-o'></i></p>");
   pauseoverlay = $("<div id='pause' class='overlay'></div>");
@@ -349,7 +374,23 @@ $(document).ready(function() {
     return $("#popper-container").css("cursor", "none");
   });
   return $("#startmatch").click(function() {
-    return alert("firebase time!!");
+    var mdb_myactions, newMatch;
+    newMatch = fb.child("matches").push();
+    fb.child("matches").child(newMatch.name()).child("created_on").set(Firebase.ServerValue.TIMESTAMP);
+    fb.child("matches").child(newMatch.name()).child("player1").set(user.id);
+    mdb_myactions = fb.child("players").child(user.id).push();
+    fb.child("players").child(user.id).child(mdb_myactions.name()).set({
+      name: "nancy",
+      points: 0,
+      boardchange: {
+        add: "",
+        addrow: "",
+        pop: "",
+        currmatrix: "one"
+      },
+      send: ""
+    });
+    return $("#startscreen").find("span").append("<br />link to match: <input type='text' value='" + window.location.origin + "/?m=" + newMatch.name() + "' />");
   });
 });
 
@@ -912,7 +953,7 @@ jQuery.fn.putInMatrix = function(loc, pop) {
           }
           r++;
         }
-        if (looseguys.length > 1) {
+        if (looseguys.length > 0) {
           bonussec = Math.round(looseguys.length * DROP_TIME_MULTIPLER);
           newsec = addRowCounterSecs + bonussec;
           newsec = Math.min(newsec, ADDROW_TIMER_CEILING);
