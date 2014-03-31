@@ -56,6 +56,21 @@
   border: solid 5px #AAA;
   border-radius: 5px;
   overflow: hidden; }
+  #popper-container .screwqueue-container {
+    height: 30px;
+    width: 600px;
+    position: absolute;
+    color: #888;
+    bottom: 20px;
+    left: 20px; }
+    #popper-container .screwqueue-container .screwqueue-ball {
+      width: 15px;
+      height: 15px;
+      border-radius: 50px;
+      display: inline-block;
+      margin-right: 5px;
+      position: relative;
+      border: solid 2px #BBB; }
 
 .popper-shooter {
   width: 50px;
