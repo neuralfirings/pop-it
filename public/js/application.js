@@ -135,12 +135,29 @@ isLoggedIn = false;
 autoLogIn = true;
 
 auth = new FirebaseSimpleLogin(fb, function(e, u) {
+  var match, match_id;
   if (e) {
     return console.log("Firebase error: " + e);
   } else if (u) {
     user = u;
     console.log("Anonymouse User " + u.id);
-    return $("#startscreen").css("color", "#888");
+    $("#startscreen").css("color", "#888");
+    match_id = getUrlParam("m");
+    if (match_id !== "") {
+      match = fb.child("matches").child(match_id);
+      return match.on("value", function(d) {
+        if (d.val() !== null) {
+          if (d.val().player2 === void 0) {
+            if (d.val().player1 !== user.id) {
+              match.child("player2").set(user.id);
+              return console.log("You are Player 2!");
+            } else {
+              return console.log("You are Player 1!");
+            }
+          }
+        }
+      });
+    }
   } else {
     if (autoLogIn) {
       console.log("Getting id...");
@@ -352,7 +369,6 @@ $(document).ready(function() {
           addRow();
           numRowAdded++;
           addRowCounterSecs = Math.max(ADDROW_TIMER_MIN, ADDROW_TIMER_CEILING * Math.pow(ADDROW_TIMER_MULTIPLIER, numRowAdded));
-          console.log(addRowCounterSecs);
         }
         return addRowCounterSecs = addRowCounterSecs - 1 * refresh;
       }
@@ -380,7 +396,7 @@ $(document).ready(function() {
     fb.child("matches").child(newMatch.name()).child("player1").set(user.id);
     mdb_myactions = fb.child("players").child(user.id).push();
     fb.child("players").child(user.id).child(mdb_myactions.name()).set({
-      name: "nancy",
+      name: "Rando",
       points: 0,
       boardchange: {
         add: "",
@@ -771,7 +787,6 @@ drop = function(locs, type, callback) {
           });
         }
       } else {
-        console.log(i);
         if (i === locs.length - 1) {
           ldiv.fadeOut({
             duration: 150,
@@ -781,16 +796,14 @@ drop = function(locs, type, callback) {
                   return callback();
                 }), 10);
               }
-              $(this).remove();
-              return console.log("removing1", $(this));
+              return $(this).remove();
             }
           });
         } else {
           ldiv.fadeOut({
             duration: 150,
             complete: function() {
-              $(this).remove();
-              return console.log("removing2", $(this));
+              return $(this).remove();
             }
           });
         }

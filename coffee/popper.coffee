@@ -88,7 +88,19 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
   else if u 
     user = u
     console.log "Anonymouse User " + u.id
-    $("#startscreen").css("color", "#888")
+    $("#startscreen").css("color", "#888") # show start screen
+    match_id = getUrlParam("m")
+    if match_id != "" # game on
+      match = fb.child("matches").child(match_id)
+      match.on("value", (d) -> 
+        if d.val() != null # Make sure it's not a ghost game
+          if d.val().player2 == undefined # waiting for second player
+            if d.val().player1 != user.id # and I am not second player
+              match.child("player2").set(user.id) # then I AM SECOND PLAYER!!!!
+              console.log "You are Player 2!"
+            else
+              console.log "You are Player 1!"
+      );
   else 
     if autoLogIn
       console.log "Getting id..."
@@ -304,7 +316,6 @@ $(document).ready ->
           numRowAdded++
           # reset counter
           addRowCounterSecs = Math.max(ADDROW_TIMER_MIN, ADDROW_TIMER_CEILING * Math.pow(ADDROW_TIMER_MULTIPLIER, numRowAdded))
-          console.log addRowCounterSecs
         addRowCounterSecs = addRowCounterSecs - 1*refresh
     ), 1000 * refresh
 
@@ -332,7 +343,7 @@ $(document).ready ->
     fb.child("matches").child(newMatch.name()).child("player1").set(user.id)
     mdb_myactions =  fb.child("players").child(user.id).push()
     fb.child("players").child(user.id).child(mdb_myactions.name()).set( {
-        name: "nancy", 
+        name: "Rando", 
         points: 0, 
         boardchange: { 
           add: "", 
@@ -659,7 +670,6 @@ drop = (locs, type, callback) ->
           );
 
       else
-        console.log i
         if i == locs.length-1
           ldiv.fadeOut({duration: 150, complete: () ->
             if callback != undefined
@@ -667,12 +677,10 @@ drop = (locs, type, callback) ->
                 callback()
               ), 10
             $(this).remove();
-            console.log "removing1", $(this)
           });
         else 
           ldiv.fadeOut({duration: 150, complete: () ->
             $(this).remove();
-            console.log "removing2", $(this)
           });
       i++
   return
