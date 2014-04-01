@@ -98,10 +98,12 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
     console.log "Anonymouse User " + u.id
     match_id = getUrlParam("m")
     if match_id != "" # game on
+
+      # start match: listen for players
       startmatch = fb.child("matches").child(match_id)
       startmatch.on("value", (d) -> 
         if d.val() != null # Make sure it's not a ghost game
-          if d.val().winner == undefined # no winner yet
+          if d.val().winner == undefined or d.val().winner == ""# no winner yet
             if d.child("players").hasChild(user.id) == true # you are player 1
               console.log "You are Player 1!"
               isMultiPlayer = true
@@ -144,25 +146,26 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
           $("#popper-container").append sqdiv
       ) # end start match
 
-      # WEIRD BUG: win() doesn't call??
-      endmatch = fb.child("matches").child(match_id)
+      # mid match: listen for transits (sending rows to one another)
+      transit = fb.child("matches").child(match_id).child("transit")
+      transit.on("child_added", (d) ->
+        if d.val() != null 
+          window.dv = d.val()
+          if d.val().to == user.id #and value.status == undefined
+            addRow(d.val().addrow, "You got a gift")
+            transit.child(d.name()).child("status").set("done")
+      )
+
+      # end match: listen for winners
+      endmatch = fb.child("matches").child(match_id).child("winner")
       endmatch.on("value", (d) ->
-        if d.val() != null # Make sure it's not a ghost game
-          console.log d.val().winner
-          if d.val().winner == undefined # no winner yet
-            transit = fb.child("matches").child(match_id).child("transit")
-            transit.on("child_added", (d) ->
-              if d.val() != null 
-                window.dv = d.val()
-                if d.val().to == user.id #and value.status == undefined
-                  addRow(d.val().addrow, "You got a gift")
-                  transit.child(d.name()).child("status").set("done")
-            )
+        console.log "winner", d.val()
+        if d.val() != undefined and d.val() != "" # no winner yet
+          console.log "somebody won"
+          if d.val() == user.id 
+            win()
           else
-            if d.val().winner == user.id 
-              win()
-            else
-              gameOver()
+            lose()
       )
 
 
@@ -421,8 +424,8 @@ $(document).ready ->
         currmatrix: "one"
       }
     })
-    match.child.("winner").set("")
-    match.child.("transit").set("")
+    match.child("winner").set("")
+    # match.child("transit").set("")
     
     # alert("firebase time!! " + newMatch.name())
     $("#startscreen").find("span").last().append("<br /><span style='font-size: 14px; font-weight: normal'>link to match: <input type='text' value='" + window.location.origin + "/?m=" + match.name() + "' /></span>")
@@ -528,33 +531,34 @@ addRows = (n) ->
     i++
 
 addRow = (colors, flash) ->
-  scoochAllDown()
-  # toggleMatrixPosition()
+  if !isWon and !isGameOver 
+    scoochAllDown()
+    # toggleMatrixPosition()
 
-  # assumes adding a complete row
-  if (colors == undefined)
-    colors = []
-    for i in bubbleMatrix[0]
-      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
-      colors.push BUBBLE_OPTIONS[rand]
-  else if (colors.length < bubbleMatrix[0].length)
-    i = colors.length
-    while i < bubbleMatrix[0].length
-      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
-      colors.push BUBBLE_OPTIONS[rand]
-      i++
+    # assumes adding a complete row
+    if (colors == undefined)
+      colors = []
+      for i in bubbleMatrix[0]
+        rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
+        colors.push BUBBLE_OPTIONS[rand]
+    else if (colors.length < bubbleMatrix[0].length)
+      i = colors.length
+      while i < bubbleMatrix[0].length
+        rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
+        colors.push BUBBLE_OPTIONS[rand]
+        i++
 
 
-  num = 0
-  for color in colors
-    div = $("#popper-container").createBubble(color).addClass("popper-" + color).text('0,'+num)
-    loc = {row: 0, num: num}
-    div.putInMatrix loc, false
-    div.hide().fadeIn({duration: 200})
-    num++
+    num = 0
+    for color in colors
+      div = $("#popper-container").createBubble(color).addClass("popper-" + color).text('0,'+num)
+      loc = {row: 0, num: num}
+      div.putInMatrix loc, false
+      div.hide().fadeIn({duration: 200})
+      num++
 
-  if flash != undefined 
-    noticeFlash(flash)
+    if flash != undefined 
+      noticeFlash(flash)
 
 scoochAllDown = (n) ->
   furthestRow = 0
@@ -572,7 +576,7 @@ scoochAllDown = (n) ->
           furthestRow = r+1
   toggleMatrixPosition()
   if furthestRow > MAX_ROW_NUM
-    gameOver()
+    lose()
 
 
 
@@ -760,8 +764,12 @@ getDivFromLoc = (loc) ->
   div = $(".point[data-matrow=" + loc.row + "][data-matnum=" + loc.num + "]")
   return div
 
-# TODO Re name to lost
-gameOver = () ->
+################
+### END GAME ###
+################
+
+lose = () ->
+  console.log "game over"
   $("#gameover").show()
   isGameOver = true
   clearInterval(window.addrow)
@@ -960,10 +968,10 @@ jQuery.fn.putInMatrix = (loc, pop) ->
       )
     else
       if loc.row > MAX_ROW_NUM
-        gameOver()
+        lose()
         div = $(".point").last()
         div.css("background-color", "#DDD").css("border-color", "#BBB")
-        div.putInMatrix prevMatrixLoc
+        # div.putInMatrix prevMatrixLoc
 
   shooting = false 
   return
