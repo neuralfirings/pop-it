@@ -86,6 +86,7 @@ fb = new Firebase("https://pop-it.firebaseio.com/")
 user = ""
 isLoggedIn = false
 autoLogIn = true
+opponentID = undefined
 auth = new FirebaseSimpleLogin(fb, (e, u) ->
   if e
     console.log "Firebase error: " + e
@@ -99,30 +100,27 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
       match = fb.child("matches").child(match_id)
       match.on("value", (d) -> 
         if d.val() != null # Make sure it's not a ghost game
-          if d.val().player1 != undefined and d.val().player1 == user.id # you are player 1
-              console.log "You are Player 1!"
-              isMultiPlayer = true
-              $("#startplaying").text("Start Match") 
-              myPlayerNum = 1
-              if d.val().player2 == undefined
-                console.log "waiting for your opponent"
-                $("#startplaying").addClass("disabled").text("waiting for opponent")
-              else
-                opponentID = d.val().player2
-                $("#startplaying").removeClass("disabled").text("Start Match")
-          else if d.val().player2 != undefined and d.val().player2 == user.id # you are player 2
-              console.log "You are Player 2!"
-              isMultiPlayer = true
-              $("#startplaying").text("Start Match")
-              myPlayerNum = 2
-              opponentID = d.val().player1
-          else if d.val().player2 == undefined # you are the NEW player 2
-              match.child("player2").set(user.id) 
-              isMultiPlayer = true
-              console.log "You are Player 2!"
-              $("#startplaying").text("Start Match")
-              myPlayerNum = 2
-              opponentID = d.val().player1
+          if d.child("players").hasChild(user.id) == true # you are player 1
+            console.log "You are Player 1!"
+            isMultiPlayer = true
+            $("#startplaying").text("Start Match") 
+            myPlayerNum = 1
+            if d.val().player2_id == undefined #and d.val().player2 == undefined
+              $("#startplaying").addClass("disabled").text("waiting for opponent")
+            else
+              opponentID = d.val().player2_id
+              $("#startplaying").removeClass("disabled").text("Start Match")
+          else if d.val().player2_id == undefined or d.val().player2_id == user.id # you are the player 2
+            match.child("player2_id").set(user.id) 
+            isMultiPlayer = true
+            console.log "You are Player 2!"
+            $("#startplaying").text("Start Match")
+            myPlayerNum = 2
+            opponentID = d.val().player1_id
+            console.log opponentID
+          else 
+            $("#startplaying").addClass("disabled").text("Match Full")
+
         if isMultiPlayer == true
           console.log "game on"
           clearInterval(window.addrow)
@@ -140,11 +138,23 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
           $("#popper-container").append sqdiv
 
           if !$("#startplaying").hasClass("disabled")
-            opponentBoard = fb.child("players").child(opponentID).child(match_id).child("boardchange")
-            opponentBoard.child("addrow").on("child_added", (d) ->
-              addRow(d.val(), "Your 'friend' sent you a gift")
-              console.log "Your friend sent you a gift", opponentID
+            transit = fb.child("matches").child("transit")
+            transit.on("child_added", (d) ->
+              # console.log "hey", d.val()
+              if d.val() != null 
+                window.dv = d.val()
+                # for key, value of d.val()
+                #   console.log "hey", key, value
+                if d.val().to == user.id #and value.status == "waiting"
+                  addRow(d.val().addrow, "You got a gift")
+                  transit.child(d.name()).child("status").set("done")
             )
+
+            # opponentBoard = fb.child("matches").child("players").child(opponentID).child("boardchange")
+            # opponentBoard.child("addrow").on("child_added", (d) ->
+            #   addRow(d.val(), "Your 'friend' sent you a gift")
+            #   console.log "Your friend sent you a gift", opponentID
+            # )
       );
     $("#startscreen").css("color", "#888") # show start screen
   else 
@@ -387,24 +397,23 @@ $(document).ready ->
     $("#popper-container").css("cursor", "none")
 
   $("#startmatch").click () ->
-    newMatch = fb.child("matches").push()
-    fb.child("matches").child(newMatch.name()).child("created_on").set(Firebase.ServerValue.TIMESTAMP)
-    fb.child("matches").child(newMatch.name()).child("player1").set(user.id)
-    mdb_myactions =  fb.child("players").child(user.id).push()
-    fb.child("players").child(user.id).child(mdb_myactions.name()).set( {
-        name: "Rando", 
-        points: 0, 
-        boardchange: { 
-          add: "", 
-          addrow: "", 
-          pop: "", 
-          currmatrix: "one"
-        }, 
-        send: "" 
+    match = fb.child("matches").push()
+    match.child("created_on").set(Firebase.ServerValue.TIMESTAMP)
+    match.child("player1_id").set(user.id)
+    match.child("players").child(user.id).set({
+      userid: user.id,
+      name: "Rando", 
+      points: 0, 
+      boardchange: { 
+        add: "", 
+        addrow: "", 
+        pop: "", 
+        currmatrix: "one"
       }
-    )
+    })
+    
     # alert("firebase time!! " + newMatch.name())
-    $("#startscreen").find("span").append("<br />link to match: <input type='text' value='" + window.location.origin + "/?m=" + newMatch.name() + "' />")
+    $("#startscreen").find("span").last().append("<br /><span style='font-size: 14px; font-weight: normal'>link to match: <input type='text' value='" + window.location.origin + "/?m=" + match.name() + "' /></span>")
 
 # return # end of document ready
 
@@ -507,7 +516,6 @@ addRows = (n) ->
     i++
 
 addRow = (colors, flash) ->
-
   scoochAllDown()
   # toggleMatrixPosition()
 
@@ -812,7 +820,13 @@ addToScrewQueue = (arr, type) ->
     $(".screwqueue-" + (screwQueue.length - 1)).addClass("popper-" + color)
 
     if screwQueue.length == 10
-      fb.child("players").child(user.id).child("boardchange").child("addrow").push(screwQueue)
+      fb.child("matches").child("transit").push({
+        from: user.id,
+        to: opponentID,
+        addrow: screwQueue
+      })
+
+      # fb.child("players").child(user.id).child("boardchange").child("addrow").push(screwQueue)
       screwQueue = []
       for c in BUBBLE_OPTIONS
         $(".screwqueue-ball").removeClass("popper-" + c)
