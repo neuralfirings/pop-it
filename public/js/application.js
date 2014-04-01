@@ -1,4 +1,4 @@
-var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, addToScrewQueue, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isLoggedIn, isMatrixLocEmpty, isMultiPlayer, isPaused, isWon, lookAround, moveBubble, myPlayerNum, noticeFlash, numRowAdded, pause, scoochAllDown, screwQueue, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
+var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, addToScrewQueue, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isLoggedIn, isMatrixLocEmpty, isMultiPlayer, isPaused, isWon, lookAround, moveBubble, myPlayerNum, noticeFlash, numRowAdded, opponentID, pause, scoochAllDown, screwQueue, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
 
 NUM_PER_ROW = 10;
 
@@ -140,6 +140,8 @@ isLoggedIn = false;
 
 autoLogIn = true;
 
+opponentID = void 0;
+
 auth = new FirebaseSimpleLogin(fb, function(e, u) {
   var match, match_id;
   if (e) {
@@ -151,33 +153,29 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
     if (match_id !== "") {
       match = fb.child("matches").child(match_id);
       match.on("value", function(d) {
-        var i, opponentBoard, opponentID, sqdiv;
+        var i, sqdiv, transit;
         if (d.val() !== null) {
-          if (d.val().player1 !== void 0 && d.val().player1 === user.id) {
+          if (d.child("players").hasChild(user.id) === true) {
             console.log("You are Player 1!");
             isMultiPlayer = true;
             $("#startplaying").text("Start Match");
             myPlayerNum = 1;
-            if (d.val().player2 === void 0) {
-              console.log("waiting for your opponent");
+            if (d.val().player2_id === void 0) {
               $("#startplaying").addClass("disabled").text("waiting for opponent");
             } else {
-              opponentID = d.val().player2;
+              opponentID = d.val().player2_id;
               $("#startplaying").removeClass("disabled").text("Start Match");
             }
-          } else if (d.val().player2 !== void 0 && d.val().player2 === user.id) {
-            console.log("You are Player 2!");
-            isMultiPlayer = true;
-            $("#startplaying").text("Start Match");
-            myPlayerNum = 2;
-            opponentID = d.val().player1;
-          } else if (d.val().player2 === void 0) {
-            match.child("player2").set(user.id);
+          } else if (d.val().player2_id === void 0 || d.val().player2_id === user.id) {
+            match.child("player2_id").set(user.id);
             isMultiPlayer = true;
             console.log("You are Player 2!");
             $("#startplaying").text("Start Match");
             myPlayerNum = 2;
-            opponentID = d.val().player1;
+            opponentID = d.val().player1_id;
+            console.log(opponentID);
+          } else {
+            $("#startplaying").addClass("disabled").text("Match Full");
           }
         }
         if (isMultiPlayer === true) {
@@ -196,10 +194,15 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
           }
           $("#popper-container").append(sqdiv);
           if (!$("#startplaying").hasClass("disabled")) {
-            opponentBoard = fb.child("players").child(opponentID).child(match_id).child("boardchange");
-            return opponentBoard.child("addrow").on("child_added", function(d) {
-              addRow(d.val(), "Your 'friend' sent you a gift");
-              return console.log("Your friend sent you a gift", opponentID);
+            transit = fb.child("matches").child("transit");
+            return transit.on("child_added", function(d) {
+              if (d.val() !== null) {
+                window.dv = d.val();
+                if (d.val().to === user.id) {
+                  addRow(d.val().addrow, "You got a gift");
+                  return transit.child(d.name()).child("status").set("done");
+                }
+              }
             });
           }
         }
@@ -440,12 +443,12 @@ $(document).ready(function() {
     return $("#popper-container").css("cursor", "none");
   });
   return $("#startmatch").click(function() {
-    var mdb_myactions, newMatch;
-    newMatch = fb.child("matches").push();
-    fb.child("matches").child(newMatch.name()).child("created_on").set(Firebase.ServerValue.TIMESTAMP);
-    fb.child("matches").child(newMatch.name()).child("player1").set(user.id);
-    mdb_myactions = fb.child("players").child(user.id).push();
-    fb.child("players").child(user.id).child(mdb_myactions.name()).set({
+    var match;
+    match = fb.child("matches").push();
+    match.child("created_on").set(Firebase.ServerValue.TIMESTAMP);
+    match.child("player1_id").set(user.id);
+    match.child("players").child(user.id).set({
+      userid: user.id,
       name: "Rando",
       points: 0,
       boardchange: {
@@ -453,10 +456,9 @@ $(document).ready(function() {
         addrow: "",
         pop: "",
         currmatrix: "one"
-      },
-      send: ""
+      }
     });
-    return $("#startscreen").find("span").append("<br />link to match: <input type='text' value='" + window.location.origin + "/?m=" + newMatch.name() + "' />");
+    return $("#startscreen").find("span").last().append("<br /><span style='font-size: 14px; font-weight: normal'>link to match: <input type='text' value='" + window.location.origin + "/?m=" + match.name() + "' /></span>");
   });
 });
 
@@ -951,7 +953,11 @@ addToScrewQueue = function(arr, type) {
     screwQueue.push(color);
     $(".screwqueue-" + (screwQueue.length - 1)).addClass("popper-" + color);
     if (screwQueue.length === 10) {
-      fb.child("players").child(user.id).child("boardchange").child("addrow").push(screwQueue);
+      fb.child("matches").child("transit").push({
+        from: user.id,
+        to: opponentID,
+        addrow: screwQueue
+      });
       screwQueue = [];
       for (_j = 0, _len1 = BUBBLE_OPTIONS.length; _j < _len1; _j++) {
         c = BUBBLE_OPTIONS[_j];
