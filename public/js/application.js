@@ -160,7 +160,6 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
         if (d.val() !== null) {
           if (d.val().winner === void 0 || d.val().winner === "") {
             if (d.child("players").hasChild(user.id) === true) {
-              console.log("You are Player 1!");
               isMultiPlayer = true;
               matchID = match_id;
               $("#startscreen").find(".startplaying").text("Start Match");
@@ -176,7 +175,6 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
               startmatch.child("player2_id").set(user.id);
               isMultiPlayer = true;
               matchID = match_id;
-              console.log("You are Player 2!");
               $("#startscreen").find(".startplaying").text("Start Match");
               myPlayerNum = 2;
               opponentID = d.val().player1_id;
@@ -190,7 +188,6 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
           }
         }
         if (isMultiPlayer === true) {
-          console.log("game on");
           clearInterval(window.addrow);
           $("#timer-container").hide();
           $("#startscreen").find("#rowintervalinfo").hide();
@@ -218,9 +215,7 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
       });
       endmatch = fb.child("matches").child(match_id).child("winner");
       endmatch.on("value", function(d) {
-        console.log("winner", d.val());
         if (d.val() !== void 0 && d.val() !== "") {
-          console.log("somebody won");
           if (d.val() === user.id) {
             return win();
           } else {
@@ -232,7 +227,6 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
     $("#startscreen").css("color", "#888");
   } else {
     if (autoLogIn) {
-      console.log("Getting id...");
       auth.login('anonymous', {
         rememberMe: true
       });
