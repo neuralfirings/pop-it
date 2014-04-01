@@ -1,4 +1,4 @@
-var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, addToScrewQueue, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isLoggedIn, isMatrixLocEmpty, isMultiPlayer, isPaused, isWon, lookAround, moveBubble, myPlayerNum, noticeFlash, numRowAdded, opponentID, pause, scoochAllDown, screwQueue, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
+var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, addToScrewQueue, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isLoggedIn, isMatrixLocEmpty, isMultiPlayer, isPaused, isWon, lookAround, matchID, moveBubble, myPlayerNum, noticeFlash, numRowAdded, opponentID, pause, scoochAllDown, screwQueue, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
 
 NUM_PER_ROW = 10;
 
@@ -142,8 +142,10 @@ autoLogIn = true;
 
 opponentID = void 0;
 
+matchID = void 0;
+
 auth = new FirebaseSimpleLogin(fb, function(e, u) {
-  var match, match_id;
+  var endmatch, match_id, startmatch;
   if (e) {
     console.log("Firebase error: " + e);
   } else if (u) {
@@ -151,30 +153,37 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
     console.log("Anonymouse User " + u.id);
     match_id = getUrlParam("m");
     if (match_id !== "") {
-      match = fb.child("matches").child(match_id);
-      match.on("value", function(d) {
-        var i, sqdiv, transit;
+      startmatch = fb.child("matches").child(match_id);
+      startmatch.on("value", function(d) {
+        var i, sqdiv;
         if (d.val() !== null) {
-          if (d.child("players").hasChild(user.id) === true) {
-            console.log("You are Player 1!");
-            isMultiPlayer = true;
-            $("#startplaying").text("Start Match");
-            myPlayerNum = 1;
-            if (d.val().player2_id === void 0) {
-              $("#startplaying").addClass("disabled").text("waiting for opponent");
+          if (d.val().winner === void 0) {
+            if (d.child("players").hasChild(user.id) === true) {
+              console.log("You are Player 1!");
+              isMultiPlayer = true;
+              matchID = match_id;
+              $("#startplaying").text("Start Match");
+              myPlayerNum = 1;
+              if (d.val().player2_id === void 0) {
+                $("#startplaying").addClass("disabled").text("waiting for opponent");
+              } else {
+                opponentID = d.val().player2_id;
+                $("#startplaying").removeClass("disabled").text("Start Match");
+                startmatch.off("value");
+              }
+            } else if (d.val().player2_id === void 0 || d.val().player2_id === user.id) {
+              startmatch.child("player2_id").set(user.id);
+              isMultiPlayer = true;
+              matchID = match_id;
+              console.log("You are Player 2!");
+              $("#startplaying").text("Start Match");
+              myPlayerNum = 2;
+              opponentID = d.val().player1_id;
+              startmatch.off("value");
             } else {
-              opponentID = d.val().player2_id;
-              $("#startplaying").removeClass("disabled").text("Start Match");
+              $("#startplaying").addClass("disabled").text("Match Full");
+              startmatch.off("value");
             }
-          } else if (d.val().player2_id === void 0 || d.val().player2_id === user.id) {
-            match.child("player2_id").set(user.id);
-            isMultiPlayer = true;
-            console.log("You are Player 2!");
-            $("#startplaying").text("Start Match");
-            myPlayerNum = 2;
-            opponentID = d.val().player1_id;
-          } else {
-            $("#startplaying").addClass("disabled").text("Match Full");
           }
         }
         if (isMultiPlayer === true) {
@@ -191,9 +200,16 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
             sqdiv.append("<div class='screwqueue-ball screwqueue-" + i + "'></div>");
             i++;
           }
-          $("#popper-container").append(sqdiv);
-          if (!$("#startplaying").hasClass("disabled")) {
-            transit = fb.child("matches").child("transit");
+          return $("#popper-container").append(sqdiv);
+        }
+      });
+      endmatch = fb.child("matches").child(match_id);
+      endmatch.on("value", function(d) {
+        var transit;
+        if (d.val() !== null) {
+          console.log(d.val().winner);
+          if (d.val().winner === void 0) {
+            transit = fb.child("matches").child(match_id).child("transit");
             return transit.on("child_added", function(d) {
               if (d.val() !== null) {
                 window.dv = d.val();
@@ -203,6 +219,12 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
                 }
               }
             });
+          } else {
+            if (d.val().winner === user.id) {
+              return win();
+            } else {
+              return gameOver();
+            }
           }
         }
       });
@@ -876,7 +898,10 @@ gameOver = function() {
   isGameOver = true;
   clearInterval(window.addrow);
   shooting = false;
-  return $("#pause-button").addClass("disabled");
+  $("#pause-button").addClass("disabled");
+  if (isMultiPlayer) {
+    return fb.child("matches").child(matchID).child("winner").set(opponentID);
+  }
 };
 
 pause = function() {
@@ -952,7 +977,7 @@ addToScrewQueue = function(arr, type) {
     screwQueue.push(color);
     $(".screwqueue-" + (screwQueue.length - 1)).addClass("popper-" + color);
     if (screwQueue.length === 10) {
-      fb.child("matches").child("transit").push({
+      fb.child("matches").child(matchID).child("transit").push({
         from: user.id,
         to: opponentID,
         addrow: screwQueue

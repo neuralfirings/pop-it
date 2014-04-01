@@ -87,6 +87,7 @@ user = ""
 isLoggedIn = false
 autoLogIn = true
 opponentID = undefined
+matchID = undefined
 auth = new FirebaseSimpleLogin(fb, (e, u) ->
   if e
     console.log "Firebase error: " + e
@@ -97,28 +98,34 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
     console.log "Anonymouse User " + u.id
     match_id = getUrlParam("m")
     if match_id != "" # game on
-      match = fb.child("matches").child(match_id)
-      match.on("value", (d) -> 
+      startmatch = fb.child("matches").child(match_id)
+      startmatch.on("value", (d) -> 
         if d.val() != null # Make sure it's not a ghost game
-          if d.child("players").hasChild(user.id) == true # you are player 1
-            console.log "You are Player 1!"
-            isMultiPlayer = true
-            $("#startplaying").text("Start Match") 
-            myPlayerNum = 1
-            if d.val().player2_id == undefined #and d.val().player2 == undefined
-              $("#startplaying").addClass("disabled").text("waiting for opponent")
-            else
-              opponentID = d.val().player2_id
-              $("#startplaying").removeClass("disabled").text("Start Match")
-          else if d.val().player2_id == undefined or d.val().player2_id == user.id # you are the player 2
-            match.child("player2_id").set(user.id) 
-            isMultiPlayer = true
-            console.log "You are Player 2!"
-            $("#startplaying").text("Start Match")
-            myPlayerNum = 2
-            opponentID = d.val().player1_id
-          else 
-            $("#startplaying").addClass("disabled").text("Match Full")
+          if d.val().winner == undefined # no winner yet
+            if d.child("players").hasChild(user.id) == true # you are player 1
+              console.log "You are Player 1!"
+              isMultiPlayer = true
+              matchID = match_id
+              $("#startplaying").text("Start Match") 
+              myPlayerNum = 1
+              if d.val().player2_id == undefined #and d.val().player2 == undefined
+                $("#startplaying").addClass("disabled").text("waiting for opponent")
+              else
+                opponentID = d.val().player2_id
+                $("#startplaying").removeClass("disabled").text("Start Match")
+                startmatch.off("value")
+            else if d.val().player2_id == undefined or d.val().player2_id == user.id # you are the player 2
+              startmatch.child("player2_id").set(user.id) 
+              isMultiPlayer = true
+              matchID = match_id
+              console.log "You are Player 2!"
+              $("#startplaying").text("Start Match")
+              myPlayerNum = 2
+              opponentID = d.val().player1_id
+              startmatch.off("value")
+            else 
+              $("#startplaying").addClass("disabled").text("Match Full")
+              startmatch.off("value")
 
         if isMultiPlayer == true
           console.log "game on"
@@ -135,26 +142,30 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
             sqdiv.append "<div class='screwqueue-ball screwqueue-" + i + "'></div>"
             i++
           $("#popper-container").append sqdiv
+      ) # end start match
 
-          if !$("#startplaying").hasClass("disabled")
-            transit = fb.child("matches").child("transit")
+      # WEIRD BUG: win() doesn't call??
+      endmatch = fb.child("matches").child(match_id)
+      endmatch.on("value", (d) ->
+        if d.val() != null # Make sure it's not a ghost game
+          console.log d.val().winner
+          if d.val().winner == undefined # no winner yet
+            transit = fb.child("matches").child(match_id).child("transit")
             transit.on("child_added", (d) ->
-              # console.log "hey", d.val()
               if d.val() != null 
                 window.dv = d.val()
-                # for key, value of d.val()
-                #   console.log "hey", key, value
-                if d.val().to == user.id #and value.status == "waiting"
+                if d.val().to == user.id #and value.status == undefined
                   addRow(d.val().addrow, "You got a gift")
                   transit.child(d.name()).child("status").set("done")
             )
+          else
+            if d.val().winner == user.id 
+              win()
+            else
+              gameOver()
+      )
 
-            # opponentBoard = fb.child("matches").child("players").child(opponentID).child("boardchange")
-            # opponentBoard.child("addrow").on("child_added", (d) ->
-            #   addRow(d.val(), "Your 'friend' sent you a gift")
-            #   console.log "Your friend sent you a gift", opponentID
-            # )
-      );
+
     $("#startscreen").css("color", "#888") # show start screen
   else 
     if autoLogIn
@@ -410,6 +421,8 @@ $(document).ready ->
         currmatrix: "one"
       }
     })
+    match.child.("winner").set("")
+    match.child.("transit").set("")
     
     # alert("firebase time!! " + newMatch.name())
     $("#startscreen").find("span").last().append("<br /><span style='font-size: 14px; font-weight: normal'>link to match: <input type='text' value='" + window.location.origin + "/?m=" + match.name() + "' /></span>")
@@ -755,6 +768,9 @@ gameOver = () ->
   shooting = false
   $("#pause-button").addClass("disabled")
 
+  if isMultiPlayer
+    fb.child("matches").child(matchID).child("winner").set(opponentID)
+
 
 pause = () ->
   $("#pause").show()
@@ -819,7 +835,7 @@ addToScrewQueue = (arr, type) ->
     $(".screwqueue-" + (screwQueue.length - 1)).addClass("popper-" + color)
 
     if screwQueue.length == 10
-      fb.child("matches").child("transit").push({
+      fb.child("matches").child(matchID).child("transit").push({
         from: user.id,
         to: opponentID,
         addrow: screwQueue
