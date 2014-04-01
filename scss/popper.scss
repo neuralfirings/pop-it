@@ -159,7 +159,7 @@
   position: absolute;
   bottom: 0px;
   opacity: 0;
-  z-index: 1000
+  z-index: 1000;
 }
 
 .overlay {
@@ -192,6 +192,7 @@
     background: #B99; 
     z-index: 1010;
     p {
+      margin-top: 100px;
       color: #300;
     }
   }
@@ -199,6 +200,10 @@
     opacity: 0.8;
     background: #CBEED8; 
     z-index: 1010; 
+    margin-top: 100px;
+    p {
+      margin-top: 100px;
+    }
   }
   &#startscreen { 
     opacity: 0.9;

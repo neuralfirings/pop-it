@@ -163,13 +163,13 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
               console.log("You are Player 1!");
               isMultiPlayer = true;
               matchID = match_id;
-              $(".startplaying").text("Start Match");
+              $("#startscreen").find(".startplaying").text("Start Match");
               myPlayerNum = 1;
               if (d.val().player2_id === void 0) {
-                $(".startplaying").addClass("disabled").text("waiting for opponent");
+                $("#startscreen").find(".startplaying").addClass("disabled").text("waiting for opponent");
               } else {
                 opponentID = d.val().player2_id;
-                $(".startplaying").removeClass("disabled").text("Start Match");
+                $("#startscreen").find(".startplaying").removeClass("disabled").text("Start Match");
                 startmatch.off("value");
               }
             } else if (d.val().player2_id === void 0 || d.val().player2_id === user.id) {
@@ -177,12 +177,12 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
               isMultiPlayer = true;
               matchID = match_id;
               console.log("You are Player 2!");
-              $(".startplaying").text("Start Match");
+              $("#startscreen").find(".startplaying").text("Start Match");
               myPlayerNum = 2;
               opponentID = d.val().player1_id;
               startmatch.off("value");
             } else {
-              $(".startplaying").addClass("disabled").text("Match Full");
+              $("#startscreen").find(".startplaying").addClass("disabled").text("Match Full");
               startmatch.off("value");
             }
           } else {
@@ -489,7 +489,7 @@ $(document).ready(function() {
       }
     });
     match.child("winner").set("");
-    return $("#startscreen").find("span").last().append("<br /><span style='font-size: 14px; font-weight: normal'>link to match: <input type='text' value='" + window.location.origin + "/?m=" + match.name() + "' /></span>");
+    return $(".startmatch-container").html("<span style='font-size: 14px; font-weight: normal'>link to match: <input type='text' value='" + window.location.origin + "/?m=" + match.name() + "' /></span>");
   });
 });
 
