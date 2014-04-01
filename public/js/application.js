@@ -1,4 +1,4 @@
-var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, addToScrewQueue, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, gameOver, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isLoggedIn, isMatrixLocEmpty, isMultiPlayer, isPaused, isWon, lookAround, moveBubble, myPlayerNum, noticeFlash, numRowAdded, opponentID, pause, scoochAllDown, screwQueue, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
+var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, addToScrewQueue, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isLoggedIn, isLost, isMatrixLocEmpty, isMultiPlayer, isPaused, isWon, lookAround, lose, matchID, moveBubble, myPlayerNum, noticeFlash, numRowAdded, opponentID, pause, scoochAllDown, screwQueue, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
 
 NUM_PER_ROW = 10;
 
@@ -106,7 +106,7 @@ CONTAINER_BORDER = 5;
 
 shooting = false;
 
-isGameOver = false;
+isLost = false;
 
 isPaused = true;
 
@@ -142,8 +142,10 @@ autoLogIn = true;
 
 opponentID = void 0;
 
+matchID = void 0;
+
 auth = new FirebaseSimpleLogin(fb, function(e, u) {
-  var match, match_id;
+  var endmatch, match_id, startmatch, transit;
   if (e) {
     console.log("Firebase error: " + e);
   } else if (u) {
@@ -151,30 +153,40 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
     console.log("Anonymouse User " + u.id);
     match_id = getUrlParam("m");
     if (match_id !== "") {
-      match = fb.child("matches").child(match_id);
-      match.on("value", function(d) {
-        var i, sqdiv, transit;
+      isMultiPlayer === true;
+      startmatch = fb.child("matches").child(match_id);
+      startmatch.on("value", function(d) {
+        var i, sqdiv;
         if (d.val() !== null) {
-          if (d.child("players").hasChild(user.id) === true) {
-            console.log("You are Player 1!");
-            isMultiPlayer = true;
-            $("#startplaying").text("Start Match");
-            myPlayerNum = 1;
-            if (d.val().player2_id === void 0) {
-              $("#startplaying").addClass("disabled").text("waiting for opponent");
+          if (d.val().winner === void 0 || d.val().winner === "") {
+            if (d.child("players").hasChild(user.id) === true) {
+              console.log("You are Player 1!");
+              isMultiPlayer = true;
+              matchID = match_id;
+              $(".startplaying").text("Start Match");
+              myPlayerNum = 1;
+              if (d.val().player2_id === void 0) {
+                $(".startplaying").addClass("disabled").text("waiting for opponent");
+              } else {
+                opponentID = d.val().player2_id;
+                $(".startplaying").removeClass("disabled").text("Start Match");
+                startmatch.off("value");
+              }
+            } else if (d.val().player2_id === void 0 || d.val().player2_id === user.id) {
+              startmatch.child("player2_id").set(user.id);
+              isMultiPlayer = true;
+              matchID = match_id;
+              console.log("You are Player 2!");
+              $(".startplaying").text("Start Match");
+              myPlayerNum = 2;
+              opponentID = d.val().player1_id;
+              startmatch.off("value");
             } else {
-              opponentID = d.val().player2_id;
-              $("#startplaying").removeClass("disabled").text("Start Match");
+              $(".startplaying").addClass("disabled").text("Match Full");
+              startmatch.off("value");
             }
-          } else if (d.val().player2_id === void 0 || d.val().player2_id === user.id) {
-            match.child("player2_id").set(user.id);
-            isMultiPlayer = true;
-            console.log("You are Player 2!");
-            $("#startplaying").text("Start Match");
-            myPlayerNum = 2;
-            opponentID = d.val().player1_id;
           } else {
-            $("#startplaying").addClass("disabled").text("Match Full");
+            $("#startscreen").hide();
           }
         }
         if (isMultiPlayer === true) {
@@ -191,18 +203,28 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
             sqdiv.append("<div class='screwqueue-ball screwqueue-" + i + "'></div>");
             i++;
           }
-          $("#popper-container").append(sqdiv);
-          if (!$("#startplaying").hasClass("disabled")) {
-            transit = fb.child("matches").child("transit");
-            return transit.on("child_added", function(d) {
-              if (d.val() !== null) {
-                window.dv = d.val();
-                if (d.val().to === user.id) {
-                  addRow(d.val().addrow, "You got a gift");
-                  return transit.child(d.name()).child("status").set("done");
-                }
-              }
-            });
+          return $("#popper-container").append(sqdiv);
+        }
+      });
+      transit = fb.child("matches").child(match_id).child("transit");
+      transit.on("child_added", function(d) {
+        if (d.val() !== null) {
+          window.dv = d.val();
+          if (d.val().to === user.id) {
+            addRow(d.val().addrow, "You got a gift");
+            return transit.child(d.name()).child("status").set("done");
+          }
+        }
+      });
+      endmatch = fb.child("matches").child(match_id).child("winner");
+      endmatch.on("value", function(d) {
+        console.log("winner", d.val());
+        if (d.val() !== void 0 && d.val() !== "") {
+          console.log("somebody won");
+          if (d.val() === user.id) {
+            return win();
+          } else {
+            return lose();
           }
         }
       });
@@ -217,7 +239,7 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
     }
     $("#startscreen").css("color", "#888");
   }
-  return $("#startplaying").show();
+  return $(".startplaying").show();
 });
 
 $(document).ready(function() {
@@ -251,13 +273,13 @@ $(document).ready(function() {
     rowintervalinfo = "";
   }
   startoverlay = $("<div id='startscreen' class='overlay' style='color: transparent'></div>");
-  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br /> " + rowcounterinfo + rowintervalinfo + "<button class=\"btn btn-primary btn-large\" id=\"startplaying\" style=\"display:none\">Start Playing</button><br />\n<span id=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" id=\"startmatch\">start a match</a></span>\n</p>");
+  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br /> " + rowcounterinfo + rowintervalinfo + "<button class=\"btn btn-primary btn-large startplaying\" style=\"display:none\">Start Playing</button><br />\n<span class=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" class=\"startmatch-btn\">start a match</a></span>\n</p>");
   gameoverlay = $("<div id='gameover' class='overlay'></div>");
-  gameoverlay.append("<p>Game Over <i class='fa fa-frown-o'></i></p>");
+  gameoverlay.append("<p>Game Over <i class='fa fa-frown-o'></i><br /><br />\n  <button class=\"btn btn-primary btn-large startplaying\" style=\"display:none\">Start Playing</button><br />\n  <span class=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" class=\"startmatch-btn\">start a match</a></span>\n</p>");
   pauseoverlay = $("<div id='pause' class='overlay'></div>");
   pauseoverlay.append("<p>Paused. o_O</p>");
   winoverlay = $("<div id='victory' class='overlay'></div>");
-  winoverlay.append("<p>VICTORY! <i class='fa fa-smile-o'></p>");
+  winoverlay.append("\"\n<p>VICTORY! <i class='fa fa-smile-o'></i><br /><br />\n  <button class=\"btn btn-primary btn-large startplaying\" style=\"display:none\">Start Playing</button><br />\n  <span class=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" class=\"startmatch-btn\">start a match</a></span>\n</p>");
   noticeoverlay = $("<div id='notice-overlay'></div>");
   shooteroverlay = $("<div id='shooter-control-overlay'></div>");
   $("#popper-container").append(shootercontrol);
@@ -269,13 +291,18 @@ $(document).ready(function() {
   $("#popper-container").append(shooter);
   $("#popper-container").append(noticeoverlay);
   $("#popper-container").append(startoverlay);
+  if (getUrlParam("start") === "true") {
+    $("#startscreen").hide();
+    unpause();
+    $("#popper-container").css("cursor", "none");
+  }
   rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
   currColor = BUBBLE_OPTIONS[rand];
   currColorClass = "popper-" + currColor;
   $(".popper-shooter").addClass(currColorClass);
   shooteroverlay.mousemove(function(e) {
     var rotatedeg;
-    if (!(isGameOver || isPaused || isWon)) {
+    if (!(isLost || isPaused || isWon)) {
       rotatedeg = (e.pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE;
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg);
       rotatedeg = Math.min(MAX_ANGLE, rotatedeg);
@@ -286,7 +313,7 @@ $(document).ready(function() {
   });
   shooteroverlay.bind("touchmove", function(e) {
     var rotatedeg;
-    if (!(isGameOver || isPaused || isWon)) {
+    if (!(isLost || isPaused || isWon)) {
       e.preventDefault();
       rotatedeg = (e.originalEvent.touches[0].pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE;
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg);
@@ -298,7 +325,7 @@ $(document).ready(function() {
   });
   shooteroverlay.click(function(e) {
     var i, rotatedeg;
-    if (!shooting && !isGameOver && !isPaused && !isWon) {
+    if (!shooting && !isLost && !isPaused && !isWon) {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
@@ -323,7 +350,7 @@ $(document).ready(function() {
   });
   shooteroverlay.bind("touchend", function(e) {
     var i, rotatedeg;
-    if (!shooting && !isGameOver && !isPaused && !isWon) {
+    if (!shooting && !isLost && !isPaused && !isWon) {
       e.preventDefault();
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
@@ -436,12 +463,16 @@ $(document).ready(function() {
       return $(this).text("Pause");
     }
   });
-  $("#startplaying").click(function() {
-    $("#startscreen").hide();
-    unpause();
-    return $("#popper-container").css("cursor", "none");
+  $(".startplaying").click(function() {
+    if (isWon || isLost) {
+      return window.location = "?start=true";
+    } else {
+      $("#startscreen").hide();
+      unpause();
+      return $("#popper-container").css("cursor", "none");
+    }
   });
-  return $("#startmatch").click(function() {
+  return $(".startmatch-btn").click(function() {
     var match;
     match = fb.child("matches").push();
     match.child("created_on").set(Firebase.ServerValue.TIMESTAMP);
@@ -457,6 +488,7 @@ $(document).ready(function() {
         currmatrix: "one"
       }
     });
+    match.child("winner").set("");
     return $("#startscreen").find("span").last().append("<br /><span style='font-size: 14px; font-weight: normal'>link to match: <input type='text' value='" + window.location.origin + "/?m=" + match.name() + "' /></span>");
   });
 });
@@ -563,39 +595,41 @@ addRows = function(n) {
 
 addRow = function(colors, flash) {
   var color, div, i, loc, num, rand, _i, _j, _len, _len1, _ref;
-  scoochAllDown();
-  if (colors === void 0) {
-    colors = [];
-    _ref = bubbleMatrix[0];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      i = _ref[_i];
-      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
-      colors.push(BUBBLE_OPTIONS[rand]);
+  if (!isWon && !isLost) {
+    scoochAllDown();
+    if (colors === void 0) {
+      colors = [];
+      _ref = bubbleMatrix[0];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        i = _ref[_i];
+        rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
+        colors.push(BUBBLE_OPTIONS[rand]);
+      }
+    } else if (colors.length < bubbleMatrix[0].length) {
+      i = colors.length;
+      while (i < bubbleMatrix[0].length) {
+        rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
+        colors.push(BUBBLE_OPTIONS[rand]);
+        i++;
+      }
     }
-  } else if (colors.length < bubbleMatrix[0].length) {
-    i = colors.length;
-    while (i < bubbleMatrix[0].length) {
-      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
-      colors.push(BUBBLE_OPTIONS[rand]);
-      i++;
+    num = 0;
+    for (_j = 0, _len1 = colors.length; _j < _len1; _j++) {
+      color = colors[_j];
+      div = $("#popper-container").createBubble(color).addClass("popper-" + color).text('0,' + num);
+      loc = {
+        row: 0,
+        num: num
+      };
+      div.putInMatrix(loc, false);
+      div.hide().fadeIn({
+        duration: 200
+      });
+      num++;
     }
-  }
-  num = 0;
-  for (_j = 0, _len1 = colors.length; _j < _len1; _j++) {
-    color = colors[_j];
-    div = $("#popper-container").createBubble(color).addClass("popper-" + color).text('0,' + num);
-    loc = {
-      row: 0,
-      num: num
-    };
-    div.putInMatrix(loc, false);
-    div.hide().fadeIn({
-      duration: 200
-    });
-    num++;
-  }
-  if (flash !== void 0) {
-    return noticeFlash(flash);
+    if (flash !== void 0) {
+      return noticeFlash(flash);
+    }
   }
 };
 
@@ -629,7 +663,7 @@ scoochAllDown = function(n) {
   }
   toggleMatrixPosition();
   if (furthestRow > MAX_ROW_NUM) {
-    return gameOver();
+    return lose();
   }
 };
 
@@ -871,12 +905,20 @@ getDivFromLoc = function(loc) {
   return div;
 };
 
-gameOver = function() {
+
+/* END GAME */
+
+lose = function() {
   $("#gameover").show();
-  isGameOver = true;
+  isLost = true;
   clearInterval(window.addrow);
   shooting = false;
-  return $("#pause-button").addClass("disabled");
+  $("#pause-button").addClass("disabled");
+  if (isMultiPlayer) {
+    fb.child("matches").child(matchID).child("winner").set(opponentID);
+  }
+  $(".startmatch-btn").show();
+  return $(".startplaying").show();
 };
 
 pause = function() {
@@ -894,7 +936,9 @@ win = function() {
   clearInterval(window.addrow);
   isWon = true;
   shooting = false;
-  return $("#pause-button").addClass("disabled");
+  $("#pause-button").addClass("disabled");
+  $(".startmatch-btn").show();
+  return $(".startplaying").show();
 };
 
 checkIfWon = function() {
@@ -952,7 +996,7 @@ addToScrewQueue = function(arr, type) {
     screwQueue.push(color);
     $(".screwqueue-" + (screwQueue.length - 1)).addClass("popper-" + color);
     if (screwQueue.length === 10) {
-      fb.child("matches").child("transit").push({
+      fb.child("matches").child(matchID).child("transit").push({
         from: user.id,
         to: opponentID,
         addrow: screwQueue
@@ -1091,10 +1135,9 @@ jQuery.fn.putInMatrix = function(loc, pop) {
       });
     } else {
       if (loc.row > MAX_ROW_NUM) {
-        gameOver();
+        lose();
         div = $(".point").last();
         div.css("background-color", "#DDD").css("border-color", "#BBB");
-        div.putInMatrix(prevMatrixLoc);
       }
     }
   }
