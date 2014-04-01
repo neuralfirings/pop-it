@@ -180,13 +180,26 @@
     font-weight: bold;
   }
 
+  .btn {
+    border-radius: 5px;
+    border: solid 5px #0A5F7B;
+    font-size: 32px;
+    font-weight: 900;
+  }
+
   &#gameover { 
+    opacity: 0.8;
     background: #B99; 
+    z-index: 1010;
     p {
       color: #300;
     }
   }
-  &#victory { background: #CBEED8; }
+  &#victory { 
+    opacity: 0.8;
+    background: #CBEED8; 
+    z-index: 1010; 
+  }
   &#startscreen { 
     opacity: 0.9;
     display: block;
@@ -197,12 +210,6 @@
       font-weight: 600;
       margin-left: 40px;
       margin-right: 40px;
-      .btn {
-        border-radius: 5px;
-        border: solid 5px #0A5F7B;
-        font-size: 32px;
-        font-weight: 900;
-      }
     }
   }
 }

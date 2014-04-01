@@ -68,7 +68,7 @@ CONTAINER_BORDER = 5 # constant
 
 # starter values
 shooting = false 
-isGameOver = false
+isLost = false
 isPaused = true
 isWon = false
 currMatrix = ""
@@ -87,6 +87,7 @@ user = ""
 isLoggedIn = false
 autoLogIn = true
 opponentID = undefined
+matchID = undefined
 auth = new FirebaseSimpleLogin(fb, (e, u) ->
   if e
     console.log "Firebase error: " + e
@@ -97,29 +98,38 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
     console.log "Anonymouse User " + u.id
     match_id = getUrlParam("m")
     if match_id != "" # game on
-      match = fb.child("matches").child(match_id)
-      match.on("value", (d) -> 
+      isMultiPlayer == true
+      # start match: listen for players
+      startmatch = fb.child("matches").child(match_id)
+      startmatch.on("value", (d) -> 
         if d.val() != null # Make sure it's not a ghost game
-          if d.child("players").hasChild(user.id) == true # you are player 1
-            console.log "You are Player 1!"
-            isMultiPlayer = true
-            $("#startplaying").text("Start Match") 
-            myPlayerNum = 1
-            if d.val().player2_id == undefined #and d.val().player2 == undefined
-              $("#startplaying").addClass("disabled").text("waiting for opponent")
-            else
-              opponentID = d.val().player2_id
-              $("#startplaying").removeClass("disabled").text("Start Match")
-          else if d.val().player2_id == undefined or d.val().player2_id == user.id # you are the player 2
-            match.child("player2_id").set(user.id) 
-            isMultiPlayer = true
-            console.log "You are Player 2!"
-            $("#startplaying").text("Start Match")
-            myPlayerNum = 2
-            opponentID = d.val().player1_id
-            console.log opponentID
-          else 
-            $("#startplaying").addClass("disabled").text("Match Full")
+          if d.val().winner == undefined or d.val().winner == ""# no winner yet
+            if d.child("players").hasChild(user.id) == true # you are player 1
+              console.log "You are Player 1!"
+              isMultiPlayer = true
+              matchID = match_id
+              $(".startplaying").text("Start Match") 
+              myPlayerNum = 1
+              if d.val().player2_id == undefined #and d.val().player2 == undefined
+                $(".startplaying").addClass("disabled").text("waiting for opponent")
+              else
+                opponentID = d.val().player2_id
+                $(".startplaying").removeClass("disabled").text("Start Match")
+                startmatch.off("value")
+            else if d.val().player2_id == undefined or d.val().player2_id == user.id # you are the player 2
+              startmatch.child("player2_id").set(user.id) 
+              isMultiPlayer = true
+              matchID = match_id
+              console.log "You are Player 2!"
+              $(".startplaying").text("Start Match")
+              myPlayerNum = 2
+              opponentID = d.val().player1_id
+              startmatch.off("value")
+            else 
+              $(".startplaying").addClass("disabled").text("Match Full")
+              startmatch.off("value")
+          else
+            $("#startscreen").hide()
 
         if isMultiPlayer == true
           console.log "game on"
@@ -136,26 +146,31 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
             sqdiv.append "<div class='screwqueue-ball screwqueue-" + i + "'></div>"
             i++
           $("#popper-container").append sqdiv
+      ) # end start match
 
-          if !$("#startplaying").hasClass("disabled")
-            transit = fb.child("matches").child("transit")
-            transit.on("child_added", (d) ->
-              # console.log "hey", d.val()
-              if d.val() != null 
-                window.dv = d.val()
-                # for key, value of d.val()
-                #   console.log "hey", key, value
-                if d.val().to == user.id #and value.status == "waiting"
-                  addRow(d.val().addrow, "You got a gift")
-                  transit.child(d.name()).child("status").set("done")
-            )
+      # mid match: listen for transits (sending rows to one another)
+      transit = fb.child("matches").child(match_id).child("transit")
+      transit.on("child_added", (d) ->
+        if d.val() != null 
+          window.dv = d.val()
+          if d.val().to == user.id #and value.status == undefined
+            addRow(d.val().addrow, "You got a gift")
+            transit.child(d.name()).child("status").set("done")
+      )
 
-            # opponentBoard = fb.child("matches").child("players").child(opponentID).child("boardchange")
-            # opponentBoard.child("addrow").on("child_added", (d) ->
-            #   addRow(d.val(), "Your 'friend' sent you a gift")
-            #   console.log "Your friend sent you a gift", opponentID
-            # )
-      );
+      # end match: listen for winners
+      endmatch = fb.child("matches").child(match_id).child("winner")
+      endmatch.on("value", (d) ->
+        console.log "winner", d.val()
+        if d.val() != undefined and d.val() != "" # no winner yet
+          console.log "somebody won"
+          if d.val() == user.id 
+            win()
+          else
+            lose()
+      )
+
+
     $("#startscreen").css("color", "#888") # show start screen
   else 
     if autoLogIn
@@ -164,7 +179,7 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
         rememberMe: true
       });
     $("#startscreen").css("color", "#888") # show start screen
-  $("#startplaying").show()
+  $(".startplaying").show()
 )
 
 
@@ -200,16 +215,24 @@ $(document).ready ->
   startoverlay.append """
     <p>Clear the board.<br /><br />
     Connect 3 or more of the similar colors to POP them.<br /><br /> """ + rowcounterinfo + rowintervalinfo + """
-    <button class="btn btn-primary btn-large" id="startplaying" style="display:none">Start Playing</button><br />
-    <span id="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" id="startmatch">start a match</a></span>
+    <button class="btn btn-primary btn-large startplaying" style="display:none">Start Playing</button><br />
+    <span class="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" class="startmatch-btn">start a match</a></span>
     </p>
   """
   gameoverlay = $("<div id='gameover' class='overlay'></div>")
-  gameoverlay.append "<p>Game Over <i class='fa fa-frown-o'></i></p>"
+  gameoverlay.append """
+    <p>Game Over <i class='fa fa-frown-o'></i><br /><br />
+      <button class="btn btn-primary btn-large startplaying" style="display:none">Start Playing</button><br />
+      <span class="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" class="startmatch-btn">start a match</a></span>
+    </p>"""
   pauseoverlay = $("<div id='pause' class='overlay'></div>")
   pauseoverlay.append "<p>Paused. o_O</p>"
   winoverlay = $("<div id='victory' class='overlay'></div>")
-  winoverlay.append "<p>VICTORY! <i class='fa fa-smile-o'></p>"
+  winoverlay.append """"
+    <p>VICTORY! <i class='fa fa-smile-o'></i><br /><br />
+      <button class="btn btn-primary btn-large startplaying" style="display:none">Start Playing</button><br />
+      <span class="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" class="startmatch-btn">start a match</a></span>
+    </p>"""
 
   # .. underlay?
   noticeoverlay = $("<div id='notice-overlay'></div>")
@@ -227,13 +250,19 @@ $(document).ready ->
   $("#popper-container").append noticeoverlay
   $("#popper-container").append startoverlay
 
+  # Auto start
+  if getUrlParam("start") == "true"
+    $("#startscreen").hide()
+    unpause()
+    $("#popper-container").css("cursor", "none")
+
   # Shooter code
   rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
   currColor = BUBBLE_OPTIONS[rand]
   currColorClass = "popper-" + currColor
   $(".popper-shooter").addClass currColorClass
   shooteroverlay.mousemove (e) ->
-    unless isGameOver or isPaused or isWon
+    unless isLost or isPaused or isWon
       rotatedeg = (e.pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg)
       rotatedeg = Math.min(MAX_ANGLE, rotatedeg)
@@ -243,7 +272,7 @@ $(document).ready ->
     return
 
   shooteroverlay.bind "touchmove", (e) ->
-    unless isGameOver or isPaused or isWon
+    unless isLost or isPaused or isWon
       e.preventDefault()
       rotatedeg = (e.originalEvent.touches[0].pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg)
@@ -254,7 +283,7 @@ $(document).ready ->
     return
 
   shooteroverlay.click (e) ->
-    if not shooting and not isGameOver and not isPaused and not isWon
+    if not shooting and not isLost and not isPaused and not isWon
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
@@ -279,7 +308,7 @@ $(document).ready ->
     return
 
   shooteroverlay.bind "touchend", (e) ->
-    if not shooting and not isGameOver and not isPaused and not isWon
+    if not shooting and not isLost and not isPaused and not isWon
       e.preventDefault()
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
@@ -391,12 +420,15 @@ $(document).ready ->
       unpause()
       $(this).text("Pause")
 
-  $("#startplaying").click () ->
-    $("#startscreen").hide()
-    unpause()
-    $("#popper-container").css("cursor", "none")
+  $(".startplaying").click () ->
+    if isWon or isLost
+      window.location = "?start=true"
+    else
+      $("#startscreen").hide()
+      unpause()
+      $("#popper-container").css("cursor", "none")
 
-  $("#startmatch").click () ->
+  $(".startmatch-btn").click () ->
     match = fb.child("matches").push()
     match.child("created_on").set(Firebase.ServerValue.TIMESTAMP)
     match.child("player1_id").set(user.id)
@@ -411,6 +443,8 @@ $(document).ready ->
         currmatrix: "one"
       }
     })
+    match.child("winner").set("")
+    # match.child("transit").set("")
     
     # alert("firebase time!! " + newMatch.name())
     $("#startscreen").find("span").last().append("<br /><span style='font-size: 14px; font-weight: normal'>link to match: <input type='text' value='" + window.location.origin + "/?m=" + match.name() + "' /></span>")
@@ -516,33 +550,34 @@ addRows = (n) ->
     i++
 
 addRow = (colors, flash) ->
-  scoochAllDown()
-  # toggleMatrixPosition()
+  if !isWon and !isLost 
+    scoochAllDown()
+    # toggleMatrixPosition()
 
-  # assumes adding a complete row
-  if (colors == undefined)
-    colors = []
-    for i in bubbleMatrix[0]
-      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
-      colors.push BUBBLE_OPTIONS[rand]
-  else if (colors.length < bubbleMatrix[0].length)
-    i = colors.length
-    while i < bubbleMatrix[0].length
-      rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
-      colors.push BUBBLE_OPTIONS[rand]
-      i++
+    # assumes adding a complete row
+    if (colors == undefined)
+      colors = []
+      for i in bubbleMatrix[0]
+        rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
+        colors.push BUBBLE_OPTIONS[rand]
+    else if (colors.length < bubbleMatrix[0].length)
+      i = colors.length
+      while i < bubbleMatrix[0].length
+        rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
+        colors.push BUBBLE_OPTIONS[rand]
+        i++
 
 
-  num = 0
-  for color in colors
-    div = $("#popper-container").createBubble(color).addClass("popper-" + color).text('0,'+num)
-    loc = {row: 0, num: num}
-    div.putInMatrix loc, false
-    div.hide().fadeIn({duration: 200})
-    num++
+    num = 0
+    for color in colors
+      div = $("#popper-container").createBubble(color).addClass("popper-" + color).text('0,'+num)
+      loc = {row: 0, num: num}
+      div.putInMatrix loc, false
+      div.hide().fadeIn({duration: 200})
+      num++
 
-  if flash != undefined 
-    noticeFlash(flash)
+    if flash != undefined 
+      noticeFlash(flash)
 
 scoochAllDown = (n) ->
   furthestRow = 0
@@ -560,7 +595,7 @@ scoochAllDown = (n) ->
           furthestRow = r+1
   toggleMatrixPosition()
   if furthestRow > MAX_ROW_NUM
-    gameOver()
+    lose()
 
 
 
@@ -748,13 +783,21 @@ getDivFromLoc = (loc) ->
   div = $(".point[data-matrow=" + loc.row + "][data-matnum=" + loc.num + "]")
   return div
 
-# TODO Re name to lost
-gameOver = () ->
+################
+### END GAME ###
+################
+
+lose = () ->
   $("#gameover").show()
-  isGameOver = true
+  isLost = true
   clearInterval(window.addrow)
   shooting = false
   $("#pause-button").addClass("disabled")
+
+  if isMultiPlayer
+    fb.child("matches").child(matchID).child("winner").set(opponentID)
+  $(".startmatch-btn").show()
+  $(".startplaying").show()
 
 
 pause = () ->
@@ -773,6 +816,8 @@ win = () ->
   isWon = true
   shooting = false
   $("#pause-button").addClass("disabled")
+  $(".startmatch-btn").show()
+  $(".startplaying").show()
 
 checkIfWon = () ->
   didIWin = true # for now.. hehehe...
@@ -820,7 +865,7 @@ addToScrewQueue = (arr, type) ->
     $(".screwqueue-" + (screwQueue.length - 1)).addClass("popper-" + color)
 
     if screwQueue.length == 10
-      fb.child("matches").child("transit").push({
+      fb.child("matches").child(matchID).child("transit").push({
         from: user.id,
         to: opponentID,
         addrow: screwQueue
@@ -873,7 +918,6 @@ jQuery.fn.putInMatrix = (loc, pop) ->
           i++
           rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
           c = BUBBLE_OPTIONS[rand]
-          console.log c
           screwColors.push c
         addToScrewQueue(screwColors, "colors")
 
@@ -946,10 +990,10 @@ jQuery.fn.putInMatrix = (loc, pop) ->
       )
     else
       if loc.row > MAX_ROW_NUM
-        gameOver()
+        lose()
         div = $(".point").last()
         div.css("background-color", "#DDD").css("border-color", "#BBB")
-        div.putInMatrix prevMatrixLoc
+        # div.putInMatrix prevMatrixLoc
 
   shooting = false 
   return
