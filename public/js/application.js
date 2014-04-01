@@ -912,17 +912,20 @@ lose = function() {
     fb.child("matches").child(matchID).child("winner").set(opponentID);
   }
   $(".startmatch-btn").show();
-  return $(".startplaying").show();
+  $(".startplaying").show();
+  return $("#popper-container").css("cursor", "auto");
 };
 
 pause = function() {
   $("#pause").show();
-  return isPaused = true;
+  isPaused = true;
+  return $("#popper-container").css("cursor", "auto");
 };
 
 unpause = function() {
   $("#pause").hide();
-  return isPaused = false;
+  isPaused = false;
+  return $("#popper-container").css("cursor", "none");
 };
 
 win = function() {
@@ -932,7 +935,8 @@ win = function() {
   shooting = false;
   $("#pause-button").addClass("disabled");
   $(".startmatch-btn").show();
-  return $(".startplaying").show();
+  $(".startplaying").show();
+  return $("#popper-container").css("cursor", "auto");
 };
 
 checkIfWon = function() {
