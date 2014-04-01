@@ -153,6 +153,7 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
     console.log("Anonymouse User " + u.id);
     match_id = getUrlParam("m");
     if (match_id !== "") {
+      isMultiPlayer === true;
       startmatch = fb.child("matches").child(match_id);
       startmatch.on("value", function(d) {
         var i, sqdiv;
@@ -162,13 +163,13 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
               console.log("You are Player 1!");
               isMultiPlayer = true;
               matchID = match_id;
-              $("#startplaying").text("Start Match");
+              $(".startplaying").text("Start Match");
               myPlayerNum = 1;
               if (d.val().player2_id === void 0) {
-                $("#startplaying").addClass("disabled").text("waiting for opponent");
+                $(".startplaying").addClass("disabled").text("waiting for opponent");
               } else {
                 opponentID = d.val().player2_id;
-                $("#startplaying").removeClass("disabled").text("Start Match");
+                $(".startplaying").removeClass("disabled").text("Start Match");
                 startmatch.off("value");
               }
             } else if (d.val().player2_id === void 0 || d.val().player2_id === user.id) {
@@ -176,14 +177,16 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
               isMultiPlayer = true;
               matchID = match_id;
               console.log("You are Player 2!");
-              $("#startplaying").text("Start Match");
+              $(".startplaying").text("Start Match");
               myPlayerNum = 2;
               opponentID = d.val().player1_id;
               startmatch.off("value");
             } else {
-              $("#startplaying").addClass("disabled").text("Match Full");
+              $(".startplaying").addClass("disabled").text("Match Full");
               startmatch.off("value");
             }
+          } else {
+            $("#startscreen").hide();
           }
         }
         if (isMultiPlayer === true) {
@@ -236,7 +239,7 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
     }
     $("#startscreen").css("color", "#888");
   }
-  return $("#startplaying").show();
+  return $(".startplaying").show();
 });
 
 $(document).ready(function() {
@@ -270,13 +273,13 @@ $(document).ready(function() {
     rowintervalinfo = "";
   }
   startoverlay = $("<div id='startscreen' class='overlay' style='color: transparent'></div>");
-  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br /> " + rowcounterinfo + rowintervalinfo + "<button class=\"btn btn-primary btn-large\" id=\"startplaying\" style=\"display:none\">Start Playing</button><br />\n<span id=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" id=\"startmatch\">start a match</a></span>\n</p>");
+  startoverlay.append("<p>Clear the board.<br /><br />\nConnect 3 or more of the similar colors to POP them.<br /><br /> " + rowcounterinfo + rowintervalinfo + "<button class=\"btn btn-primary btn-large startplaying\" style=\"display:none\">Start Playing</button><br />\n<span class=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" class=\"startmatch-btn\">start a match</a></span>\n</p>");
   gameoverlay = $("<div id='gameover' class='overlay'></div>");
-  gameoverlay.append("<p>Game Over <i class='fa fa-frown-o'></i></p>");
+  gameoverlay.append("<p>Game Over <i class='fa fa-frown-o'></i><br /><br />\n  <button class=\"btn btn-primary btn-large startplaying\" style=\"display:none\">Start Playing</button><br />\n  <span class=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" class=\"startmatch-btn\">start a match</a></span>\n</p>");
   pauseoverlay = $("<div id='pause' class='overlay'></div>");
   pauseoverlay.append("<p>Paused. o_O</p>");
   winoverlay = $("<div id='victory' class='overlay'></div>");
-  winoverlay.append("<p>VICTORY! <i class='fa fa-smile-o'></p>");
+  winoverlay.append("\"\n<p>VICTORY! <i class='fa fa-smile-o'></i><br /><br />\n  <button class=\"btn btn-primary btn-large startplaying\" style=\"display:none\">Start Playing</button><br />\n  <span class=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" class=\"startmatch-btn\">start a match</a></span>\n</p>");
   noticeoverlay = $("<div id='notice-overlay'></div>");
   shooteroverlay = $("<div id='shooter-control-overlay'></div>");
   $("#popper-container").append(shootercontrol);
@@ -288,6 +291,11 @@ $(document).ready(function() {
   $("#popper-container").append(shooter);
   $("#popper-container").append(noticeoverlay);
   $("#popper-container").append(startoverlay);
+  if (getUrlParam("start") === "true") {
+    $("#startscreen").hide();
+    unpause();
+    $("#popper-container").css("cursor", "none");
+  }
   rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
   currColor = BUBBLE_OPTIONS[rand];
   currColorClass = "popper-" + currColor;
@@ -455,12 +463,16 @@ $(document).ready(function() {
       return $(this).text("Pause");
     }
   });
-  $("#startplaying").click(function() {
-    $("#startscreen").hide();
-    unpause();
-    return $("#popper-container").css("cursor", "none");
+  $(".startplaying").click(function() {
+    if (isWon || isGameOver) {
+      return window.location = "?start=true";
+    } else {
+      $("#startscreen").hide();
+      unpause();
+      return $("#popper-container").css("cursor", "none");
+    }
   });
-  return $("#startmatch").click(function() {
+  return $(".startmatch-btn").click(function() {
     var match;
     match = fb.child("matches").push();
     match.child("created_on").set(Firebase.ServerValue.TIMESTAMP);
@@ -897,15 +909,16 @@ getDivFromLoc = function(loc) {
 /* END GAME */
 
 lose = function() {
-  console.log("game over");
   $("#gameover").show();
   isGameOver = true;
   clearInterval(window.addrow);
   shooting = false;
   $("#pause-button").addClass("disabled");
   if (isMultiPlayer) {
-    return fb.child("matches").child(matchID).child("winner").set(opponentID);
+    fb.child("matches").child(matchID).child("winner").set(opponentID);
   }
+  $(".startmatch-btn").show();
+  return $(".startplaying").show();
 };
 
 pause = function() {
@@ -923,7 +936,9 @@ win = function() {
   clearInterval(window.addrow);
   isWon = true;
   shooting = false;
-  return $("#pause-button").addClass("disabled");
+  $("#pause-button").addClass("disabled");
+  $(".startmatch-btn").show();
+  return $(".startplaying").show();
 };
 
 checkIfWon = function() {

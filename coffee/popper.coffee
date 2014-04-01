@@ -98,7 +98,7 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
     console.log "Anonymouse User " + u.id
     match_id = getUrlParam("m")
     if match_id != "" # game on
-
+      isMultiPlayer == true
       # start match: listen for players
       startmatch = fb.child("matches").child(match_id)
       startmatch.on("value", (d) -> 
@@ -108,26 +108,28 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
               console.log "You are Player 1!"
               isMultiPlayer = true
               matchID = match_id
-              $("#startplaying").text("Start Match") 
+              $(".startplaying").text("Start Match") 
               myPlayerNum = 1
               if d.val().player2_id == undefined #and d.val().player2 == undefined
-                $("#startplaying").addClass("disabled").text("waiting for opponent")
+                $(".startplaying").addClass("disabled").text("waiting for opponent")
               else
                 opponentID = d.val().player2_id
-                $("#startplaying").removeClass("disabled").text("Start Match")
+                $(".startplaying").removeClass("disabled").text("Start Match")
                 startmatch.off("value")
             else if d.val().player2_id == undefined or d.val().player2_id == user.id # you are the player 2
               startmatch.child("player2_id").set(user.id) 
               isMultiPlayer = true
               matchID = match_id
               console.log "You are Player 2!"
-              $("#startplaying").text("Start Match")
+              $(".startplaying").text("Start Match")
               myPlayerNum = 2
               opponentID = d.val().player1_id
               startmatch.off("value")
             else 
-              $("#startplaying").addClass("disabled").text("Match Full")
+              $(".startplaying").addClass("disabled").text("Match Full")
               startmatch.off("value")
+          else
+            $("#startscreen").hide()
 
         if isMultiPlayer == true
           console.log "game on"
@@ -177,7 +179,7 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
         rememberMe: true
       });
     $("#startscreen").css("color", "#888") # show start screen
-  $("#startplaying").show()
+  $(".startplaying").show()
 )
 
 
@@ -213,16 +215,24 @@ $(document).ready ->
   startoverlay.append """
     <p>Clear the board.<br /><br />
     Connect 3 or more of the similar colors to POP them.<br /><br /> """ + rowcounterinfo + rowintervalinfo + """
-    <button class="btn btn-primary btn-large" id="startplaying" style="display:none">Start Playing</button><br />
-    <span id="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" id="startmatch">start a match</a></span>
+    <button class="btn btn-primary btn-large startplaying" style="display:none">Start Playing</button><br />
+    <span class="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" class="startmatch-btn">start a match</a></span>
     </p>
   """
   gameoverlay = $("<div id='gameover' class='overlay'></div>")
-  gameoverlay.append "<p>Game Over <i class='fa fa-frown-o'></i></p>"
+  gameoverlay.append """
+    <p>Game Over <i class='fa fa-frown-o'></i><br /><br />
+      <button class="btn btn-primary btn-large startplaying" style="display:none">Start Playing</button><br />
+      <span class="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" class="startmatch-btn">start a match</a></span>
+    </p>"""
   pauseoverlay = $("<div id='pause' class='overlay'></div>")
   pauseoverlay.append "<p>Paused. o_O</p>"
   winoverlay = $("<div id='victory' class='overlay'></div>")
-  winoverlay.append "<p>VICTORY! <i class='fa fa-smile-o'></p>"
+  winoverlay.append """"
+    <p>VICTORY! <i class='fa fa-smile-o'></i><br /><br />
+      <button class="btn btn-primary btn-large startplaying" style="display:none">Start Playing</button><br />
+      <span class="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" class="startmatch-btn">start a match</a></span>
+    </p>"""
 
   # .. underlay?
   noticeoverlay = $("<div id='notice-overlay'></div>")
@@ -239,6 +249,12 @@ $(document).ready ->
   $("#popper-container").append shooter
   $("#popper-container").append noticeoverlay
   $("#popper-container").append startoverlay
+
+  # Auto start
+  if getUrlParam("start") == "true"
+    $("#startscreen").hide()
+    unpause()
+    $("#popper-container").css("cursor", "none")
 
   # Shooter code
   rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length)
@@ -404,12 +420,15 @@ $(document).ready ->
       unpause()
       $(this).text("Pause")
 
-  $("#startplaying").click () ->
-    $("#startscreen").hide()
-    unpause()
-    $("#popper-container").css("cursor", "none")
+  $(".startplaying").click () ->
+    if isWon or isGameOver
+      window.location = "?start=true"
+    else
+      $("#startscreen").hide()
+      unpause()
+      $("#popper-container").css("cursor", "none")
 
-  $("#startmatch").click () ->
+  $(".startmatch-btn").click () ->
     match = fb.child("matches").push()
     match.child("created_on").set(Firebase.ServerValue.TIMESTAMP)
     match.child("player1_id").set(user.id)
@@ -769,7 +788,6 @@ getDivFromLoc = (loc) ->
 ################
 
 lose = () ->
-  console.log "game over"
   $("#gameover").show()
   isGameOver = true
   clearInterval(window.addrow)
@@ -778,6 +796,8 @@ lose = () ->
 
   if isMultiPlayer
     fb.child("matches").child(matchID).child("winner").set(opponentID)
+  $(".startmatch-btn").show()
+  $(".startplaying").show()
 
 
 pause = () ->
@@ -796,6 +816,8 @@ win = () ->
   isWon = true
   shooting = false
   $("#pause-button").addClass("disabled")
+  $(".startmatch-btn").show()
+  $(".startplaying").show()
 
 checkIfWon = () ->
   didIWin = true # for now.. hehehe...

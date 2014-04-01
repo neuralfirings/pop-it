@@ -156,12 +156,21 @@
     font-size: 60px;
     margin-top: 200px;
     font-weight: bold; }
+  .overlay .btn {
+    border-radius: 5px;
+    border: solid 5px #0A5F7B;
+    font-size: 32px;
+    font-weight: 900; }
   .overlay#gameover {
-    background: #B99; }
+    opacity: 0.8;
+    background: #B99;
+    z-index: 1010; }
     .overlay#gameover p {
       color: #300; }
   .overlay#victory {
-    background: #CBEED8; }
+    opacity: 0.8;
+    background: #CBEED8;
+    z-index: 1010; }
   .overlay#startscreen {
     opacity: 0.9;
     display: block;
@@ -172,11 +181,6 @@
       font-weight: 600;
       margin-left: 40px;
       margin-right: 40px; }
-      .overlay#startscreen p .btn {
-        border-radius: 5px;
-        border: solid 5px #0A5F7B;
-        font-size: 32px;
-        font-weight: 900; }
 
 #notice-overlay {
   background: transparent;
