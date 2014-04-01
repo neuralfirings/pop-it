@@ -166,11 +166,15 @@
     background: #B99;
     z-index: 1010; }
     .overlay#gameover p {
+      margin-top: 100px;
       color: #300; }
   .overlay#victory {
     opacity: 0.8;
     background: #CBEED8;
-    z-index: 1010; }
+    z-index: 1010;
+    margin-top: 100px; }
+    .overlay#victory p {
+      margin-top: 100px; }
   .overlay#startscreen {
     opacity: 0.9;
     display: block;
