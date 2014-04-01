@@ -1,4 +1,4 @@
-var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, addToScrewQueue, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isGameOver, isLoggedIn, isMatrixLocEmpty, isMultiPlayer, isPaused, isWon, lookAround, lose, matchID, moveBubble, myPlayerNum, noticeFlash, numRowAdded, opponentID, pause, scoochAllDown, screwQueue, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
+var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, addToScrewQueue, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isLoggedIn, isLost, isMatrixLocEmpty, isMultiPlayer, isPaused, isWon, lookAround, lose, matchID, moveBubble, myPlayerNum, noticeFlash, numRowAdded, opponentID, pause, scoochAllDown, screwQueue, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
 
 NUM_PER_ROW = 10;
 
@@ -106,7 +106,7 @@ CONTAINER_BORDER = 5;
 
 shooting = false;
 
-isGameOver = false;
+isLost = false;
 
 isPaused = true;
 
@@ -302,7 +302,7 @@ $(document).ready(function() {
   $(".popper-shooter").addClass(currColorClass);
   shooteroverlay.mousemove(function(e) {
     var rotatedeg;
-    if (!(isGameOver || isPaused || isWon)) {
+    if (!(isLost || isPaused || isWon)) {
       rotatedeg = (e.pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE;
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg);
       rotatedeg = Math.min(MAX_ANGLE, rotatedeg);
@@ -313,7 +313,7 @@ $(document).ready(function() {
   });
   shooteroverlay.bind("touchmove", function(e) {
     var rotatedeg;
-    if (!(isGameOver || isPaused || isWon)) {
+    if (!(isLost || isPaused || isWon)) {
       e.preventDefault();
       rotatedeg = (e.originalEvent.touches[0].pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE;
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg);
@@ -325,7 +325,7 @@ $(document).ready(function() {
   });
   shooteroverlay.click(function(e) {
     var i, rotatedeg;
-    if (!shooting && !isGameOver && !isPaused && !isWon) {
+    if (!shooting && !isLost && !isPaused && !isWon) {
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot(rotatedeg);
@@ -350,7 +350,7 @@ $(document).ready(function() {
   });
   shooteroverlay.bind("touchend", function(e) {
     var i, rotatedeg;
-    if (!shooting && !isGameOver && !isPaused && !isWon) {
+    if (!shooting && !isLost && !isPaused && !isWon) {
       e.preventDefault();
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"));
       $("#shoot-at-deg").text("Shoot at: " + Math.round(rotatedeg * 10) / 10);
@@ -464,7 +464,7 @@ $(document).ready(function() {
     }
   });
   $(".startplaying").click(function() {
-    if (isWon || isGameOver) {
+    if (isWon || isLost) {
       return window.location = "?start=true";
     } else {
       $("#startscreen").hide();
@@ -595,7 +595,7 @@ addRows = function(n) {
 
 addRow = function(colors, flash) {
   var color, div, i, loc, num, rand, _i, _j, _len, _len1, _ref;
-  if (!isWon && !isGameOver) {
+  if (!isWon && !isLost) {
     scoochAllDown();
     if (colors === void 0) {
       colors = [];
@@ -910,7 +910,7 @@ getDivFromLoc = function(loc) {
 
 lose = function() {
   $("#gameover").show();
-  isGameOver = true;
+  isLost = true;
   clearInterval(window.addrow);
   shooting = false;
   $("#pause-button").addClass("disabled");

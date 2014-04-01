@@ -68,7 +68,7 @@ CONTAINER_BORDER = 5 # constant
 
 # starter values
 shooting = false 
-isGameOver = false
+isLost = false
 isPaused = true
 isWon = false
 currMatrix = ""
@@ -262,7 +262,7 @@ $(document).ready ->
   currColorClass = "popper-" + currColor
   $(".popper-shooter").addClass currColorClass
   shooteroverlay.mousemove (e) ->
-    unless isGameOver or isPaused or isWon
+    unless isLost or isPaused or isWon
       rotatedeg = (e.pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg)
       rotatedeg = Math.min(MAX_ANGLE, rotatedeg)
@@ -272,7 +272,7 @@ $(document).ready ->
     return
 
   shooteroverlay.bind "touchmove", (e) ->
-    unless isGameOver or isPaused or isWon
+    unless isLost or isPaused or isWon
       e.preventDefault()
       rotatedeg = (e.originalEvent.touches[0].pageX - $(this).offset().left) / $(this).outerWidth() * 160 - MAX_ANGLE
       rotatedeg = Math.max(-MAX_ANGLE, rotatedeg)
@@ -283,7 +283,7 @@ $(document).ready ->
     return
 
   shooteroverlay.click (e) ->
-    if not shooting and not isGameOver and not isPaused and not isWon
+    if not shooting and not isLost and not isPaused and not isWon
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
       $("#popper-container").createBubble().addClass(currColorClass).attr("data-color", currColor).shoot rotatedeg
@@ -308,7 +308,7 @@ $(document).ready ->
     return
 
   shooteroverlay.bind "touchend", (e) ->
-    if not shooting and not isGameOver and not isPaused and not isWon
+    if not shooting and not isLost and not isPaused and not isWon
       e.preventDefault()
       rotatedeg = Number($(".popper-shooter").data("rotatedeg"))
       $("#shoot-at-deg").text "Shoot at: " + Math.round(rotatedeg * 10) / 10
@@ -421,7 +421,7 @@ $(document).ready ->
       $(this).text("Pause")
 
   $(".startplaying").click () ->
-    if isWon or isGameOver
+    if isWon or isLost
       window.location = "?start=true"
     else
       $("#startscreen").hide()
@@ -550,7 +550,7 @@ addRows = (n) ->
     i++
 
 addRow = (colors, flash) ->
-  if !isWon and !isGameOver 
+  if !isWon and !isLost 
     scoochAllDown()
     # toggleMatrixPosition()
 
@@ -789,7 +789,7 @@ getDivFromLoc = (loc) ->
 
 lose = () ->
   $("#gameover").show()
-  isGameOver = true
+  isLost = true
   clearInterval(window.addrow)
   shooting = false
   $("#pause-button").addClass("disabled")
