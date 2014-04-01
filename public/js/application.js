@@ -173,7 +173,6 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
             $("#startplaying").text("Start Match");
             myPlayerNum = 2;
             opponentID = d.val().player1_id;
-            console.log(opponentID);
           } else {
             $("#startplaying").addClass("disabled").text("Match Full");
           }
@@ -1009,7 +1008,6 @@ jQuery.fn.putInMatrix = function(loc, pop) {
           i++;
           rand = Math.floor(Math.random() * BUBBLE_OPTIONS.length);
           c = BUBBLE_OPTIONS[rand];
-          console.log(c);
           screwColors.push(c);
         }
         addToScrewQueue(screwColors, "colors");
