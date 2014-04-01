@@ -795,16 +795,19 @@ lose = () ->
     fb.child("matches").child(matchID).child("winner").set(opponentID)
   $(".startmatch-btn").show()
   $(".startplaying").show()
+  $("#popper-container").css("cursor", "auto")
 
 
 pause = () ->
   $("#pause").show()
   isPaused = true
+  $("#popper-container").css("cursor", "auto")
   # shooting = false
 
 unpause = () ->
   $("#pause").hide()
   isPaused = false
+  $("#popper-container").css("cursor", "none")
   # shooting = true
 
 win = () ->
@@ -815,6 +818,7 @@ win = () ->
   $("#pause-button").addClass("disabled")
   $(".startmatch-btn").show()
   $(".startplaying").show()
+  $("#popper-container").css("cursor", "auto")
 
 checkIfWon = () ->
   didIWin = true # for now.. hehehe...
