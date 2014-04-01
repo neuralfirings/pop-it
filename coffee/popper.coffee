@@ -105,7 +105,7 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
         if d.val() != null # Make sure it's not a ghost game
           if d.val().winner == undefined or d.val().winner == ""# no winner yet
             if d.child("players").hasChild(user.id) == true # you are player 1
-              console.log "You are Player 1!"
+              # console.log "You are Player 1!"
               isMultiPlayer = true
               matchID = match_id
               $("#startscreen").find(".startplaying").text("Start Match") 
@@ -120,7 +120,7 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
               startmatch.child("player2_id").set(user.id) 
               isMultiPlayer = true
               matchID = match_id
-              console.log "You are Player 2!"
+              # console.log "You are Player 2!"
               $("#startscreen").find(".startplaying").text("Start Match")
               myPlayerNum = 2
               opponentID = d.val().player1_id
@@ -132,7 +132,6 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
             $("#startscreen").hide()
 
         if isMultiPlayer == true
-          console.log "game on"
           clearInterval(window.addrow)
           $("#timer-container").hide()
           $("#startscreen").find("#rowintervalinfo").hide()
@@ -161,9 +160,7 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
       # end match: listen for winners
       endmatch = fb.child("matches").child(match_id).child("winner")
       endmatch.on("value", (d) ->
-        console.log "winner", d.val()
         if d.val() != undefined and d.val() != "" # no winner yet
-          console.log "somebody won"
           if d.val() == user.id 
             win()
           else
@@ -174,7 +171,6 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
     $("#startscreen").css("color", "#888") # show start screen
   else 
     if autoLogIn
-      console.log "Getting id..."
       auth.login('anonymous', {
         rememberMe: true
       });
@@ -359,8 +355,6 @@ $(document).ready ->
       bubbleMatrix[j][i] =
         x: x
         y: y
-      # p = $("#popper-container").createBubble().addClass("opt1").css("border-color", "#BBB").css("opacity", ".5").text(j+','+i)
-      # p.drawAt(x, y)
       i++
     j++
   currMatrix = "one";
