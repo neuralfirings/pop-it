@@ -228,7 +228,7 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
         shrink = 0.2;
         diameter = BUBBLE_RADIUS * 2 * shrink;
         $("#oppboard-container").remove();
-        oppBoard = $("<div style='position: absolute; right: 5px; bottom: 5px; border: solid 1px #BFBFBF; background: #D5D5D5' id='oppboard'></div>");
+        oppBoard = $("<div style='position: absolute; right: 5px; bottom: 5px; border: solid 1px #BFBFBF; background: #F5F5F5' id='oppboard'></div>");
         oppBoard.css("width", 600 * shrink + "px").css("height", 600 * shrink + "px");
         $("#popper-container").append(oppBoard);
         _ref = board.board;
@@ -239,7 +239,7 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
           b = d[1] * shrink;
           c = d[2];
           div = $("<div></div>");
-          div.addClass("popper-" + c);
+          div.addClass("popper-" + c).addClass("oppboard-point");
           div.css("position", "absolute").css("border-radius", "20px").css("border", "solid 1px #BFBFBF");
           div.css("left", l + "px").css("bottom", b + "px").width(diameter + "px").height(diameter + "px");
           _results.push(oppBoard.append(div));
