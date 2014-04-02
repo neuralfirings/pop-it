@@ -56,6 +56,16 @@
   border: solid 5px #AAA;
   border-radius: 5px;
   overflow: hidden; }
+  #popper-container .oppboard {
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    border: solid 1px #BFBFBF;
+    background: #F5F5F5; }
+    #popper-container .oppboard .oppboard-point {
+      position: absolute;
+      border-radius: 20px;
+      border: solid 1px #BFBFBF; }
   #popper-container .screwqueue-container {
     height: 30px;
     width: 600px;

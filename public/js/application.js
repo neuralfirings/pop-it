@@ -1,4 +1,4 @@
-var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, addToScrewQueue, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isLoggedIn, isLost, isMatrixLocEmpty, isMultiPlayer, isPaused, isWon, lookAround, lose, matchID, moveBubble, myPlayerNum, noticeFlash, numRowAdded, opponentID, pause, scoochAllDown, screwQueue, shooting, stringifyLoc, toggleMatrixPosition, unpause, user, win;
+var ADDROW_TIMER_CEILING, ADDROW_TIMER_MIN, ADDROW_TIMER_MULTIPLIER, BUBBLE_BORDER, BUBBLE_OPTIONS, BUBBLE_RADIUS, CONTAINER_BORDER, DEFAULT_ROWS, DROP_MULTIPLER, DROP_TIME_MULTIPLER, MAX_ANGLE, MAX_ROW_NUM, NUM_PER_ROW, ROW_TURNS_CEILING, ROW_TURNS_FLOOR, ROW_TURNS_MULTIPLIER, ROW_TURNS_RAND, SPEED, addRow, addRowCounter, addRowCounterSecs, addRows, addToScore, addToScrewQueue, auth, autoLogIn, bubbleMatrix, bubbleMatrixOne, bubbleMatrixTwo, checkCluster, checkIfWon, currMatrix, drop, fb, findClosestInMatrix, getColor, getDivFromLoc, getPointAtT, getPointAtY, getSlope, getUrlParam, isLoggedIn, isLost, isMatrixLocEmpty, isMultiPlayer, isPaused, isWon, lookAround, lose, matchID, moveBubble, myPlayerNum, noticeFlash, numRowAdded, opponentID, pause, scoochAllDown, screwQueue, shooting, stringifyLoc, syncBoard, toggleMatrixPosition, unpause, user, win;
 
 NUM_PER_ROW = 10;
 
@@ -145,12 +145,17 @@ opponentID = void 0;
 matchID = void 0;
 
 auth = new FirebaseSimpleLogin(fb, function(e, u) {
-  var endmatch, match_id, startmatch, transit;
+  var endmatch, match_id, startmatch, transit, updateOppBoard, watchOpponentBoard;
   if (e) {
     console.log("Firebase error: " + e);
   } else if (u) {
     user = u;
     console.log("Anonymouse User " + u.id);
+    fb.child("players").once("value", function(d) {
+      if (d.child(user.id).val() === null) {
+        return fb.child("players").child(user.id).set(user.id);
+      }
+    });
     match_id = getUrlParam("m");
     if (match_id !== "") {
       isMultiPlayer === true;
@@ -159,7 +164,8 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
         var i, sqdiv;
         if (d.val() !== null) {
           if (d.val().winner === void 0 || d.val().winner === "") {
-            if (d.child("players").hasChild(user.id) === true) {
+            if (d.val().player1_id === user.id) {
+              console.log("You are Player 1!");
               isMultiPlayer = true;
               matchID = match_id;
               $("#startscreen").find(".startplaying").text("Start Match");
@@ -170,15 +176,18 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
                 opponentID = d.val().player2_id;
                 $("#startscreen").find(".startplaying").removeClass("disabled").text("Start Match");
                 startmatch.off("value");
+                watchOpponentBoard(opponentID);
               }
             } else if (d.val().player2_id === void 0 || d.val().player2_id === user.id) {
               startmatch.child("player2_id").set(user.id);
               isMultiPlayer = true;
               matchID = match_id;
+              console.log("You are Player 2!");
               $("#startscreen").find(".startplaying").text("Start Match");
               myPlayerNum = 2;
               opponentID = d.val().player1_id;
               startmatch.off("value");
+              watchOpponentBoard(opponentID);
             } else {
               $("#startscreen").find(".startplaying").addClass("disabled").text("Match Full");
               startmatch.off("value");
@@ -188,6 +197,7 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
           }
         }
         if (isMultiPlayer === true) {
+          syncBoard();
           clearInterval(window.addrow);
           $("#timer-container").hide();
           $("#startscreen").find("#rowintervalinfo").hide();
@@ -213,6 +223,36 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
           }
         }
       });
+      updateOppBoard = function(board) {
+        var b, c, d, diameter, div, l, oppBoard, shrink, _i, _len, _ref, _results;
+        shrink = 0.2;
+        diameter = BUBBLE_RADIUS * 2 * shrink;
+        $("#oppboard-container").remove();
+        oppBoard = $("<div style='position: absolute; right: 5px; bottom: 5px; border: solid 1px #BFBFBF; background: #F5F5F5' id='oppboard'></div>");
+        oppBoard.css("width", 600 * shrink + "px").css("height", 600 * shrink + "px");
+        $("#popper-container").append(oppBoard);
+        _ref = board.board;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          d = _ref[_i];
+          l = d[0] * shrink;
+          b = d[1] * shrink;
+          c = d[2];
+          div = $("<div></div>");
+          div.addClass("popper-" + c).addClass("oppboard-point");
+          div.css("position", "absolute").css("border-radius", "20px").css("border", "solid 1px #BFBFBF");
+          div.css("left", l + "px").css("bottom", b + "px").width(diameter + "px").height(diameter + "px");
+          _results.push(oppBoard.append(div));
+        }
+        return _results;
+      };
+      watchOpponentBoard = function(oID) {
+        var oppBoard;
+        oppBoard = fb.child("matches").child(match_id).child("players").child(oID);
+        return oppBoard.on("value", function(d) {
+          return updateOppBoard(d.val());
+        });
+      };
       endmatch = fb.child("matches").child(match_id).child("winner");
       endmatch.on("value", function(d) {
         if (d.val() !== void 0 && d.val() !== "") {
@@ -273,7 +313,7 @@ $(document).ready(function() {
   pauseoverlay = $("<div id='pause' class='overlay'></div>");
   pauseoverlay.append("<p>Paused. o_O</p>");
   winoverlay = $("<div id='victory' class='overlay'></div>");
-  winoverlay.append("\"\n<p>VICTORY! <i class='fa fa-smile-o'></i><br /><br />\n  <button class=\"btn btn-primary btn-large startplaying\" style=\"display:none\">Start Playing</button><br />\n  <span class=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" class=\"startmatch-btn\">start a match</a></span>\n</p>");
+  winoverlay.append("<p>VICTORY! <i class='fa fa-smile-o'></i><br /><br />\n  <button class=\"btn btn-primary btn-large startplaying\" style=\"display:none\">Start Playing</button><br />\n  <span class=\"startmatch-container\" style=\"font-size: 16px; font-weight: normal\">or <a href=\"javascript:void(0)\" class=\"startmatch-btn\">start a match</a></span>\n</p>");
   noticeoverlay = $("<div id='notice-overlay'></div>");
   shooteroverlay = $("<div id='shooter-control-overlay'></div>");
   $("#popper-container").append(shootercontrol);
@@ -436,7 +476,7 @@ $(document).ready(function() {
     refresh = .1;
     window.addrow = setInterval((function() {
       if (isPaused === false) {
-        $("#timer").text(Math.max(0, Math.ceil(addRowCounterSecs)));
+        $("#timer").text(Math.max(0, Math.floor(addRowCounterSecs)));
         $("#addrowmeter").css("width", (addRowCounterSecs - 1 * refresh) / ADDROW_TIMER_CEILING * 100 + "%");
         if (addRowCounterSecs < 0) {
           addRow();
@@ -471,17 +511,6 @@ $(document).ready(function() {
     match = fb.child("matches").push();
     match.child("created_on").set(Firebase.ServerValue.TIMESTAMP);
     match.child("player1_id").set(user.id);
-    match.child("players").child(user.id).set({
-      userid: user.id,
-      name: "Rando",
-      points: 0,
-      boardchange: {
-        add: "",
-        addrow: "",
-        pop: "",
-        currmatrix: "one"
-      }
-    });
     match.child("winner").set("");
     return $(".startmatch-container").html("<span style='font-size: 14px; font-weight: normal'>link to match: <input type='text' value='" + window.location.origin + "/?m=" + match.name() + "' /></span>");
   });
@@ -576,6 +605,21 @@ findClosestInMatrix = function(x, y) {
 
 /* The next set of functions are for adding bubbles */
 
+syncBoard = function() {
+  var board, myBoard;
+  if (isMultiPlayer) {
+    board = [];
+    $(".point").each(function() {
+      var b, c, l;
+      l = parseFloat($(this).css("left"));
+      b = parseFloat($(this).css("bottom"));
+      c = $(this).data("color");
+      return board.push([l, b, c]);
+    });
+    return myBoard = fb.child("matches").child(matchID).child("players").child(user.id).child("board").set(board);
+  }
+};
+
 addRows = function(n) {
   var i, _results;
   i = 0;
@@ -622,7 +666,10 @@ addRow = function(colors, flash) {
       num++;
     }
     if (flash !== void 0) {
-      return noticeFlash(flash);
+      noticeFlash(flash);
+    }
+    if (isMultiPlayer) {
+      return syncBoard();
     }
   }
 };
@@ -1124,11 +1171,15 @@ jQuery.fn.putInMatrix = function(loc, pop) {
         }
         drop(looseguys, "drop", function() {
           if (checkIfWon() === true) {
-            return win();
+            win();
           }
+          return syncBoard();
         });
         if (checkIfWon() === true) {
-          return win();
+          win();
+        }
+        if (looseguys.length === 0) {
+          return syncBoard();
         }
       });
     } else {
@@ -1137,6 +1188,7 @@ jQuery.fn.putInMatrix = function(loc, pop) {
         div = $(".point").last();
         div.css("background-color", "#DDD").css("border-color", "#BBB");
       }
+      syncBoard();
     }
   }
   shooting = false;
