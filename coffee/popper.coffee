@@ -168,10 +168,12 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
       updateOppBoard  = (board) ->
         shrink = 0.2
         diameter = BUBBLE_RADIUS*2*shrink
-        $("#oppboard-container").remove()
-        oppBoard = $("<div style='position: absolute; right: 5px; bottom: 5px; border: solid 1px #BFBFBF; background: #F5F5F5' id='oppboard'></div>")
-        oppBoard.css("width", 600*shrink + "px").css("height", 600*shrink + "px")
-        $("#popper-container").append oppBoard
+        if $("#oppboard-container").length != 0
+          $("#oppboard-container").empty()
+        else
+          oppBoard = $("<div style='position: absolute; right: 5px; bottom: 5px; border: solid 1px #BFBFBF; background: #F5F5F5' id='oppboard'></div>")
+          oppBoard.css("width", 600*shrink + "px").css("height", 600*shrink + "px")
+          $("#popper-container").append oppBoard
 
         for d in board.board
           l = d[0]*shrink
