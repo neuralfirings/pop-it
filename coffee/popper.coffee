@@ -96,6 +96,10 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
   else if u 
     user = u
     console.log "Anonymouse User " + u.id
+    fb.child("players").once "value", (d) ->
+      if d.child(user.id).val() == null
+        fb.child("players").child(user.id).set(user.id)
+
     match_id = getUrlParam("m")
     if match_id != "" # game on
       isMultiPlayer == true
@@ -104,8 +108,8 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
       startmatch.on("value", (d) -> 
         if d.val() != null # Make sure it's not a ghost game
           if d.val().winner == undefined or d.val().winner == ""# no winner yet
-            if d.child("players").hasChild(user.id) == true # you are player 1
-              # console.log "You are Player 1!"
+            if d.val().player1_id == user.id ##d.child("players").hasChild(user.id) == true # you are player 1
+              console.log "You are Player 1!"
               isMultiPlayer = true
               matchID = match_id
               $("#startscreen").find(".startplaying").text("Start Match") 
@@ -116,15 +120,17 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
                 opponentID = d.val().player2_id
                 $("#startscreen").find(".startplaying").removeClass("disabled").text("Start Match")
                 startmatch.off("value")
+                watchOpponentBoard(opponentID)
             else if d.val().player2_id == undefined or d.val().player2_id == user.id # you are the player 2
               startmatch.child("player2_id").set(user.id) 
               isMultiPlayer = true
               matchID = match_id
-              # console.log "You are Player 2!"
+              console.log "You are Player 2!"
               $("#startscreen").find(".startplaying").text("Start Match")
               myPlayerNum = 2
               opponentID = d.val().player1_id
               startmatch.off("value")
+              watchOpponentBoard(opponentID)
             else 
               $("#startscreen").find(".startplaying").addClass("disabled").text("Match Full")
               startmatch.off("value")
@@ -132,6 +138,7 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
             $("#startscreen").hide()
 
         if isMultiPlayer == true
+          syncBoard()
           clearInterval(window.addrow)
           $("#timer-container").hide()
           $("#startscreen").find("#rowintervalinfo").hide()
@@ -156,6 +163,31 @@ auth = new FirebaseSimpleLogin(fb, (e, u) ->
             addRow(d.val().addrow, "You got a gift")
             transit.child(d.name()).child("status").set("done")
       )
+
+      # mid match: listen for board updates and update your teeny opponent's board
+      updateOppBoard  = (board) ->
+        shrink = 0.2
+        diameter = BUBBLE_RADIUS*2*shrink
+        $("#oppboard-container").remove()
+        oppBoard = $("<div style='position: absolute; right: 5px; bottom: 5px; border: solid 1px #BFBFBF; background: #D5D5D5' id='oppboard'></div>")
+        oppBoard.css("width", 600*shrink + "px").css("height", 600*shrink + "px")
+        $("#popper-container").append oppBoard
+
+        for d in board.board
+          l = d[0]*shrink
+          b = d[1]*shrink
+          c = d[2]
+
+          div = $("<div></div>")
+          div.addClass("popper-"+c)
+          div.css("position", "absolute").css("border-radius", "20px").css("border", "solid 1px #BFBFBF")
+          div.css("left", l+"px").css("bottom", b+"px").width(diameter+"px").height(diameter+"px")
+          oppBoard.append(div)
+
+      watchOpponentBoard = (oID) ->
+        oppBoard = fb.child("matches").child(match_id).child("players").child(oID)
+        oppBoard.on "value", (d) ->
+          updateOppBoard d.val() 
 
       # end match: listen for winners
       endmatch = fb.child("matches").child(match_id).child("winner")
@@ -224,7 +256,7 @@ $(document).ready ->
   pauseoverlay = $("<div id='pause' class='overlay'></div>")
   pauseoverlay.append "<p>Paused. o_O</p>"
   winoverlay = $("<div id='victory' class='overlay'></div>")
-  winoverlay.append """"
+  winoverlay.append """
     <p>VICTORY! <i class='fa fa-smile-o'></i><br /><br />
       <button class="btn btn-primary btn-large startplaying" style="display:none">Start Playing</button><br />
       <span class="startmatch-container" style="font-size: 16px; font-weight: normal">or <a href="javascript:void(0)" class="startmatch-btn">start a match</a></span>
@@ -391,7 +423,7 @@ $(document).ready ->
     refresh = .1 # seconds
     window.addrow = setInterval (() ->
       if isPaused == false 
-        $("#timer").text(Math.max(0, Math.ceil(addRowCounterSecs)))
+        $("#timer").text(Math.max(0, Math.floor(addRowCounterSecs)))
         $("#addrowmeter").css("width", (addRowCounterSecs-1*refresh)/ADDROW_TIMER_CEILING*100 + "%")
         if addRowCounterSecs < 0
           addRow()
@@ -426,17 +458,18 @@ $(document).ready ->
     match = fb.child("matches").push()
     match.child("created_on").set(Firebase.ServerValue.TIMESTAMP)
     match.child("player1_id").set(user.id)
-    match.child("players").child(user.id).set({
-      userid: user.id,
-      name: "Rando", 
-      points: 0, 
-      boardchange: { 
-        add: "", 
-        addrow: "", 
-        pop: "", 
-        currmatrix: "one"
-      }
-    })
+    # match.child("players").child(user.id).set({
+    #   userid: user.id,
+    #   name: "Rando", 
+    #   points: 0, 
+    #   board: "",
+    #   boardchange: { 
+    #     add: "", 
+    #     addrow: "", 
+    #     pop: "", 
+    #     currmatrix: "one"
+    #   }
+    # })
     match.child("winner").set("")
     # match.child("transit").set("")
     
@@ -540,6 +573,19 @@ findClosestInMatrix = (x, y) ->
 ########################################################
 ### The next set of functions are for adding bubbles ###
 ########################################################
+
+syncBoard = () ->
+  if isMultiPlayer
+    board = []
+    $(".point").each () ->
+      l = parseFloat($(this).css("left"))
+      b = parseFloat($(this).css("bottom"))
+      c = $(this).data("color")
+      board.push([l, b, c])
+    # console.log board
+
+    myBoard = fb.child("matches").child(matchID).child("players").child(user.id).child("board").set(board)
+
 addRows = (n) ->
   i = 0
   while i < n 
@@ -576,6 +622,9 @@ addRow = (colors, flash) ->
     if flash != undefined 
       noticeFlash(flash)
 
+    if isMultiPlayer
+      syncBoard()
+
 scoochAllDown = (n) ->
   furthestRow = 0
   furthestRowReached = false
@@ -593,8 +642,6 @@ scoochAllDown = (n) ->
   toggleMatrixPosition()
   if furthestRow > MAX_ROW_NUM
     lose()
-
-
 
 moveBubble = (oldloc, newloc) ->
   # TO DO: add some animation here
@@ -958,6 +1005,7 @@ jQuery.fn.putInMatrix = (loc, pop) ->
             n++
           r++
 
+
         # bonus time for dropping
         if looseguys.length > 0
           bonussec = Math.round(looseguys.length * DROP_TIME_MULTIPLER)
@@ -984,10 +1032,14 @@ jQuery.fn.putInMatrix = (loc, pop) ->
         drop(looseguys, "drop", () ->
           if checkIfWon() == true
             win()
+          syncBoard() # Option 3: ZOMG, shoot, pop, and drop!
         )
         
         if checkIfWon() == true
           win()
+
+        if looseguys.length == 0
+          syncBoard() # Option 2: pop same color only
       )
     else
       if loc.row > MAX_ROW_NUM
@@ -995,6 +1047,7 @@ jQuery.fn.putInMatrix = (loc, pop) ->
         div = $(".point").last()
         div.css("background-color", "#DDD").css("border-color", "#BBB")
         # div.putInMatrix prevMatrixLoc
+      syncBoard() # Option 1: just shootin'
 
   shooting = false 
   return
