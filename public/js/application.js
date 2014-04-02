@@ -227,10 +227,13 @@ auth = new FirebaseSimpleLogin(fb, function(e, u) {
         var b, c, d, diameter, div, l, oppBoard, shrink, _i, _len, _ref, _results;
         shrink = 0.2;
         diameter = BUBBLE_RADIUS * 2 * shrink;
-        $("#oppboard-container").remove();
-        oppBoard = $("<div style='position: absolute; right: 5px; bottom: 5px; border: solid 1px #BFBFBF; background: #F5F5F5' id='oppboard'></div>");
-        oppBoard.css("width", 600 * shrink + "px").css("height", 600 * shrink + "px");
-        $("#popper-container").append(oppBoard);
+        if ($("#oppboard-container").length !== 0) {
+          $("#oppboard-container").empty();
+        } else {
+          oppBoard = $("<div style='position: absolute; right: 5px; bottom: 5px; border: solid 1px #BFBFBF; background: #F5F5F5' id='oppboard'></div>");
+          oppBoard.css("width", 600 * shrink + "px").css("height", 600 * shrink + "px");
+          $("#popper-container").append(oppBoard);
+        }
         _ref = board.board;
         _results = [];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
